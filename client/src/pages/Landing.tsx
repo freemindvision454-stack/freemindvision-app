@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Video, DollarSign, Globe, Users, Sparkles, TrendingUp } from "lucide-react";
+import logoUrl from "@assets/1762348677561_1762361963790.jpg";
 
 export default function Landing() {
   return (
@@ -17,6 +18,15 @@ export default function Landing() {
         </div>
 
         <div className="relative z-10 container mx-auto px-4 py-20 text-center">
+          {/* Logo */}
+          <div className="mb-8 flex justify-center">
+            <img 
+              src={logoUrl} 
+              alt="FreeMind Vision Logo" 
+              className="h-32 md:h-40 w-auto object-contain animate-in fade-in zoom-in duration-700"
+            />
+          </div>
+
           <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
             <Sparkles className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-primary">Global Creator Platform</span>

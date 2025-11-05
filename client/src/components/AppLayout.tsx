@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
+import logoUrl from "@assets/1762348677561_1762361963790.jpg";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -33,7 +34,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/">
-              <a className="flex items-center gap-2 hover-elevate p-2 rounded-lg transition-all">
+              <a className="flex items-center gap-3 hover-elevate p-2 rounded-lg transition-all" data-testid="link-home">
+                <img 
+                  src={logoUrl} 
+                  alt="FreeMind Vision Logo" 
+                  className="h-10 w-10 object-contain"
+                />
                 <div className="text-2xl font-poppins font-bold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
                   FreeMind
                 </div>
