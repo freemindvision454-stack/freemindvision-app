@@ -37,6 +37,8 @@ export const users = pgTable("users", {
   creditBalance: integer("credit_balance").default(0).notNull(), // YimiCoins balance
   totalEarnings: real("total_earnings").default(0).notNull(), // Total earnings in USD
   currency: varchar("currency").default("USD").notNull(), // Preferred currency (FCFA, USD, EUR, etc.)
+  stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID for payments
+  stripeConnectId: varchar("stripe_connect_id"), // Stripe Connect ID for creator payouts
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -142,8 +144,10 @@ export const transactions = pgTable("transactions", {
   type: varchar("type", { length: 50 }).notNull(), // 'purchase', 'gift_received', 'withdrawal'
   amount: real("amount").notNull(), // Amount in USD
   credits: integer("credits"), // Credits involved (for purchases)
+  paymentMethod: varchar("payment_method", { length: 50 }), // 'stripe', 'orange_money', 'mtn_money', 'wave', 'paypal'
+  paymentProvider: varchar("payment_provider", { length: 100 }), // Provider-specific transaction ID
   description: text("description"),
-  status: varchar("status", { length: 50 }).default("completed").notNull(), // 'pending', 'completed', 'failed'
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // 'pending', 'completed', 'failed', 'cancelled'
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
