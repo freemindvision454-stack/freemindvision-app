@@ -7,6 +7,7 @@ import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
 import fs from "fs";
+import Stripe from "stripe";
 
 // Configure multer for file uploads
 const uploadStorage = multer.diskStorage({
@@ -41,6 +42,14 @@ const upload = multer({
     }
   },
 });
+
+// Initialize Stripe (only if keys are provided)
+let stripe: Stripe | null = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2024-06-20" as any, // TypeScript types may not include all API versions
+  });
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -272,9 +281,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Purchase credits
-  app.post("/api/credits/purchase", isAuthenticated, async (req: any, res) => {
+  // Create Stripe payment intent for credit purchase
+  app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
     try {
+      if (!stripe) {
+        return res.status(503).json({ message: "Payment processing not configured. Please add Stripe API keys." });
+      }
+
       const userId = req.user.claims.sub;
       const { packageId } = req.body;
 
@@ -285,9 +298,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Package not found" });
       }
 
-      // In production, this would integrate with a real payment processor
-      // For now, we'll just add the credits
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
+      // Create or retrieve Stripe customer
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
+          metadata: { userId },
+        });
+        customerId = customer.id;
+        await storage.updateUser(userId, { stripeCustomerId: customerId });
+      }
+
+      // Create payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(pkg.priceUsd * 100), // Convert to cents
+        currency: "usd",
+        customer: customerId,
+        metadata: {
+          userId,
+          packageId: pkg.id,
+          credits: pkg.credits + pkg.bonus,
+          packageName: pkg.name,
+        },
+        description: `Purchase ${pkg.name} - ${pkg.credits + pkg.bonus} YimiCoins`,
+      });
+
+      // Create pending transaction
+      await storage.createTransaction({
+        userId,
+        type: "purchase",
+        amount: pkg.priceUsd,
+        credits: pkg.credits + pkg.bonus,
+        paymentMethod: "stripe",
+        paymentProvider: paymentIntent.id,
+        description: `Purchasing ${pkg.name}`,
+        status: "pending",
+      });
+
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ message: "Failed to create payment intent: " + error.message });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), async (req: any, res) => {
+    if (!stripe) {
+      return res.status(503).json({ message: "Stripe not configured" });
+    }
+
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+      if (process.env.STRIPE_WEBHOOK_SECRET) {
+        // Production: Verify webhook signature
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig as string,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+      } else {
+        // Development: Parse without verification (NOT for production)
+        const payload = req.body.toString();
+        event = JSON.parse(payload);
+        console.warn("⚠️  Webhook signature verification skipped (development mode)");
+      }
+    } catch (err: any) {
+      console.error("Webhook error:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    try {
+      if (event.type === "payment_intent.succeeded") {
+        const paymentIntent = event.data.object;
+        const { userId, credits } = paymentIntent.metadata;
+
+        // Add credits to user account
+        await storage.updateUserCredits(userId, parseInt(credits));
+
+        // Update transaction status
+        await storage.updateTransactionStatus(paymentIntent.id, "completed");
+
+        console.log(`✅ Payment succeeded for user ${userId}: ${credits} YimiCoins`);
+      } else if (event.type === "payment_intent.payment_failed") {
+        const paymentIntent = event.data.object;
+        
+        // Update transaction status
+        await storage.updateTransactionStatus(paymentIntent.id, "failed");
+
+        console.log(`❌ Payment failed: ${paymentIntent.id}`);
+      }
+    } catch (err: any) {
+      console.error("Error handling webhook event:", err);
+      return res.status(500).json({ message: "Webhook handler failed" });
+    }
+
+    res.json({ received: true });
+  });
+
+  // Initiate Mobile Money payment
+  app.post("/api/mobile-money/initiate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { packageId, provider, phoneNumber } = req.body;
+
+      const packages = await storage.getCreditPackages();
+      const pkg = packages.find((p) => p.id === packageId);
+
+      if (!pkg) {
+        return res.status(404).json({ message: "Package not found" });
+      }
+
+      // In production, integrate with actual Mobile Money APIs (Orange, MTN, Wave)
+      // For now, simulate pending payment
+      const transaction = await storage.createTransaction({
+        userId,
+        type: "purchase",
+        amount: pkg.priceUsd,
+        credits: pkg.credits + pkg.bonus,
+        paymentMethod: provider,
+        paymentProvider: `${provider}_${Date.now()}`,
+        description: `Mobile Money payment - ${pkg.name}`,
+        status: "pending",
+      });
+
+      // TODO: Call actual Mobile Money API here
+      // For testing, auto-complete the payment after 3 seconds
+      setTimeout(async () => {
+        const totalCredits = pkg.credits + pkg.bonus;
+        await storage.updateUserCredits(userId, totalCredits);
+        await storage.updateTransactionStatus(transaction.paymentProvider!, "completed");
+        console.log(`✅ Mobile Money payment completed for user ${userId}`);
+      }, 3000);
+
+      res.json({ 
+        success: true, 
+        transactionId: transaction.id,
+        message: "Payment initiated. Please check your phone to confirm.",
+      });
+    } catch (error) {
+      console.error("Error initiating mobile money payment:", error);
+      res.status(500).json({ message: "Failed to initiate payment" });
+    }
+  });
+
+  // Purchase credits (fallback for testing/development)
+  app.post("/api/credits/purchase", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { packageId, paymentMethod = "test" } = req.body;
+
+      const packages = await storage.getCreditPackages();
+      const pkg = packages.find((p) => p.id === packageId);
+
+      if (!pkg) {
+        return res.status(404).json({ message: "Package not found" });
+      }
+
+      // For testing: instantly add credits without payment
+      // In production, use Stripe or Mobile Money endpoints
       const totalCredits = pkg.credits + pkg.bonus;
       await storage.updateUserCredits(userId, totalCredits);
 
@@ -297,7 +475,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "purchase",
         amount: pkg.priceUsd,
         credits: totalCredits,
-        description: `Purchased ${pkg.name}`,
+        paymentMethod: paymentMethod,
+        description: `Test purchase - ${pkg.name}`,
         status: "completed",
       });
 

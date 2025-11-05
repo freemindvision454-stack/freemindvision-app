@@ -1,17 +1,19 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Coins, CreditCard, Smartphone, Banknote, Sparkles, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { CreditPackage } from "@shared/schema";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { PaymentMethodModal } from "@/components/PaymentMethodModal";
 
 export default function CreditShop() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -33,25 +35,10 @@ export default function CreditShop() {
     enabled: isAuthenticated,
   });
 
-  const purchaseMutation = useMutation({
-    mutationFn: async (packageId: string) => {
-      return await apiRequest("POST", "/api/credits/purchase", { packageId });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Purchase Successful!",
-        description: "YimiCoins added to your account.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Purchase Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const handleBuyClick = (pkg: CreditPackage) => {
+    setSelectedPackage(pkg);
+    setShowPaymentModal(true);
+  };
 
   if (isLoading || !user) {
     return (
@@ -154,18 +141,10 @@ export default function CreditShop() {
                     <Button
                       className="w-full font-poppins font-semibold"
                       size="lg"
-                      onClick={() => purchaseMutation.mutate(pkg.id)}
-                      disabled={purchaseMutation.isPending}
+                      onClick={() => handleBuyClick(pkg)}
                       data-testid={`button-buy-${pkg.id}`}
                     >
-                      {purchaseMutation.isPending ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        "Buy Now"
-                      )}
+                      Acheter maintenant
                     </Button>
                   </div>
                 </CardContent>
@@ -229,6 +208,12 @@ export default function CreditShop() {
             </div>
           </CardContent>
         </Card>
+
+        <PaymentMethodModal
+          open={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          selectedPackage={selectedPackage}
+        />
       </div>
     </div>
   );

@@ -29,6 +29,7 @@ export interface IStorage {
   // User operations (Replit Auth required)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(userId: string, updates: Partial<User>): Promise<User>;
 
   // Video operations
   createVideo(video: InsertVideo): Promise<Video>;
@@ -59,6 +60,7 @@ export interface IStorage {
   // Transaction operations
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getTransactionsByUser(userId: string): Promise<Transaction[]>;
+  updateTransactionStatus(paymentProviderId: string, status: string): Promise<void>;
 
   // Dashboard operations
   getDashboardStats(userId: string): Promise<any>;
@@ -83,6 +85,15 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date(),
         },
       })
+      .returning();
+    return user;
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, userId))
       .returning();
     return user;
   }
@@ -256,6 +267,13 @@ export class DatabaseStorage implements IStorage {
       .from(transactions)
       .where(eq(transactions.userId, userId))
       .orderBy(desc(transactions.createdAt));
+  }
+
+  async updateTransactionStatus(paymentProviderId: string, status: string): Promise<void> {
+    await db
+      .update(transactions)
+      .set({ status })
+      .where(eq(transactions.paymentProvider, paymentProviderId));
   }
 
   // Dashboard operations

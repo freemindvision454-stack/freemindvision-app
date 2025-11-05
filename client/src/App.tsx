@@ -11,6 +11,9 @@ import Upload from "@/pages/Upload";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
 import CreditShop from "@/pages/CreditShop";
+import Checkout from "@/pages/Checkout";
+import MobileMoneyPayment from "@/pages/MobileMoneyPayment";
+import BankTransferPayment from "@/pages/BankTransferPayment";
 import AppLayout from "@/components/AppLayout";
 
 function Router() {
@@ -51,6 +54,31 @@ function Router() {
       <Route path="/shop">
         <AppLayout>
           <CreditShop />
+        </AppLayout>
+      </Route>
+      <Route path="/checkout">
+        <AppLayout>
+          <Checkout />
+        </AppLayout>
+      </Route>
+      <Route path="/payment/orange_money">
+        <AppLayout>
+          <MobileMoneyPayment />
+        </AppLayout>
+      </Route>
+      <Route path="/payment/mtn_money">
+        <AppLayout>
+          <MobileMoneyPayment />
+        </AppLayout>
+      </Route>
+      <Route path="/payment/wave">
+        <AppLayout>
+          <MobileMoneyPayment />
+        </AppLayout>
+      </Route>
+      <Route path="/payment/bank_transfer">
+        <AppLayout>
+          <BankTransferPayment />
         </AppLayout>
       </Route>
       <Route component={NotFound} />
