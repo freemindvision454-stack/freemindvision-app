@@ -78,29 +78,45 @@ app.use((req, res, next) => {
     // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '5000', 10);
     
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      log(`✓ Server successfully started on port ${port}`);
-      log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
-      log(`✓ Ready to accept connections`);
-    });
-
-    // Handle server errors
+    // Handle server errors before listening
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
         log(`ERROR: Port ${port} is already in use`);
       } else {
         log(`ERROR: Server error: ${error.message}`);
       }
+      console.error(error);
       process.exit(1);
+    });
+
+    // Start server and wait for it to be ready
+    await new Promise<void>((resolve, reject) => {
+      server.listen({
+        port,
+        host: "0.0.0.0",
+        reusePort: true,
+      }, (err?: Error) => {
+        if (err) {
+          log(`ERROR: Failed to start server: ${err.message}`);
+          reject(err);
+          return;
+        }
+        log(`✓ Server successfully started on port ${port}`);
+        log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+        log(`✓ Ready to accept connections`);
+        
+        // Signal that server is ready (for deployment platforms)
+        if (process.send) {
+          process.send('ready');
+        }
+        
+        resolve();
+      });
     });
 
   } catch (error: any) {
     log(`FATAL ERROR during server initialization: ${error.message}`);
-    console.error(error);
+    console.error('Full error details:', error);
     process.exit(1);
   }
 })();
