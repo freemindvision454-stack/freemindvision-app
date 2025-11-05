@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -52,6 +52,23 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint (must be first, no auth required)
+  app.get("/health", (_req: Request, res: Response) => {
+    res.status(200).json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+
+  // Root health check
+  app.get("/api/health", (_req: Request, res: Response) => {
+    res.status(200).json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString() 
+    });
+  });
+
   // Auth middleware
   await setupAuth(app);
 

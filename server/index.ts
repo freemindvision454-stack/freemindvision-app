@@ -47,35 +47,60 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    log(`Starting server in ${process.env.NODE_ENV || 'development'} mode...`);
+    
+    const server = await registerRoutes(app);
+    log(`Routes registered successfully`);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
-  });
+      log(`Error: ${status} - ${message}`);
+      res.status(status).json({ message });
+    });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      log(`Setting up Vite for development...`);
+      await setupVite(app, server);
+    } else {
+      log(`Serving static files for production...`);
+      serveStatic(app);
+    }
+
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || '5000', 10);
+    
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`✓ Server successfully started on port ${port}`);
+      log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+      log(`✓ Ready to accept connections`);
+    });
+
+    // Handle server errors
+    server.on('error', (error: any) => {
+      if (error.code === 'EADDRINUSE') {
+        log(`ERROR: Port ${port} is already in use`);
+      } else {
+        log(`ERROR: Server error: ${error.message}`);
+      }
+      process.exit(1);
+    });
+
+  } catch (error: any) {
+    log(`FATAL ERROR during server initialization: ${error.message}`);
+    console.error(error);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();
