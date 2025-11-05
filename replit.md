@@ -1,301 +1,51 @@
 # FreeMind Vision
 
-FreeMind Vision is a global creator platform inspired by TikTok, YouTube, and Twitter, designed to empower creators worldwide to share content, build audiences, and monetize their creativity.
+## Overview
 
-## Project Overview
+FreeMind Vision is a global creator platform, inspired by leading social media platforms, designed to empower creators worldwide. Its core mission is to provide an accessible platform for sharing video content, building audiences, and monetizing creativity, with a particular focus on creators in Africa and other international markets. The platform aims to facilitate self-expression, audience growth, and financial independence for creators through a robust video and monetization ecosystem.
 
-**Mission**: Enable creators to express themselves, grow their audience, and earn real money through an accessible, creator-first video platform.
-
-**Target Audience**: Content creators globally, with special focus on African creators and international markets.
-
-## Key Features (MVP)
-
-### Authentication & User Management
-- Multi-provider authentication via Replit Auth (Google, GitHub, Email)
-- User profiles with bio, stats, and creator status
-- Currency preferences (FCFA, USD, EUR, etc.)
-- Credit balance (YimiCoins) tracking
-
-### Video Platform
-- TikTok-style vertical video feed with auto-play
-- Video upload with drag-and-drop interface
-- Custom thumbnails support
-- Video metadata (title, description)
-- Views and likes tracking
-- Comments system
-
-### Monetization System
-- **YimiCoins**: Virtual currency for supporting creators
-- **Credit Shop**: Purchase YimiCoins packages
-- **Virtual Gifts**: 6 gift types (Heart, Star, Crown, Diamond, Lightning, Trophy)
-- **60/40 Revenue Split**: Creators keep 60% of all gifts received
-- **Multi-currency Support**: Display earnings in FCFA, USD, etc.
-
-### Creator Dashboard
-- Total earnings tracking (60% of gift value)
-- Video performance metrics (views, likes, gifts)
-- Revenue breakdown visualization
-- Individual video earnings
-
-### Social Features
-- Like videos
-- Comment on videos
-- Share functionality (prepared for implementation)
-- User profiles with video galleries
-
-## Tech Stack
-
-### Frontend
-- **React** with TypeScript
-- **Wouter** for routing
-- **TailwindCSS** + Shadcn UI for beautiful components
-- **TanStack Query** for data fetching
-- **React Hook Form** with Zod validation
-
-### Backend
-- **Express.js** with TypeScript
-- **PostgreSQL** (Neon) for data persistence
-- **Drizzle ORM** for type-safe database queries
-- **Replit Auth** (OpenID Connect) for authentication
-- **Multer** for file uploads
-- **Passport.js** for session management
-
-## Database Schema
-
-### Core Tables
-- **users**: User accounts with profile data, creator status, credits, earnings
-- **videos**: Video metadata, URLs, stats (views, likes)
-- **comments**: User comments on videos
-- **likes**: Many-to-many relationship for video likes
-- **giftTypes**: Predefined virtual gifts with credit costs and USD values
-- **gifts**: Gift transactions between users
-- **creditPackages**: YimiCoins purchase packages
-- **transactions**: Financial transaction history
-- **sessions**: Passport session storage
-
-## Revenue Model
-
-### Creator Earnings (60/40 Split)
-- Creators receive **60%** of gift value in USD
-- Platform retains **40%** for infrastructure and operations
-- Automatic conversion from YimiCoins to USD
-- Real-time earnings tracking in dashboard
-
-### Example:
-- User sends 1 Diamond gift (100 YimiCoins = $1.00 USD)
-- Creator receives: $0.60 USD
-- Platform receives: $0.40 USD
-
-## Payment Methods Supported
-
-### For Users (Buying Credits)
-- Credit/Debit Cards (Visa, Mastercard)
-- Mobile Money (Orange Money, MTN Money, Wave, Airtel Money)
-- PayPal
-- Bank Transfer
-
-### For Creators (Withdrawals)
-- Mobile Money (Africa)
-- PayPal (International)
-- Bank Transfer (International)
-- Stripe (Coming soon)
-
-## Project Structure
-
-```
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── pages/         # Page components
-│   │   │   ├── Landing.tsx        # Marketing landing page
-│   │   │   ├── Feed.tsx           # TikTok-style video feed
-│   │   │   ├── Upload.tsx         # Video upload interface
-│   │   │   ├── Dashboard.tsx      # Creator earnings dashboard
-│   │   │   ├── Profile.tsx        # User/creator profiles
-│   │   │   └── CreditShop.tsx     # YimiCoins purchase
-│   │   ├── components/    # Reusable components
-│   │   │   ├── AppLayout.tsx      # Main navigation layout
-│   │   │   ├── GiftModal.tsx      # Gift sending modal
-│   │   │   └── ui/                # Shadcn components
-│   │   ├── hooks/         # Custom React hooks
-│   │   └── lib/           # Utilities
-├── server/                 # Express backend
-│   ├── routes.ts          # API endpoints
-│   ├── storage.ts         # Database operations
-│   ├── db.ts              # Database connection
-│   ├── replitAuth.ts      # Authentication setup
-│   └── seed.ts            # Database seeding
-├── shared/
-│   └── schema.ts          # Shared types & Drizzle schema
-└── uploaded_videos/       # Video file storage
-```
-
-## API Endpoints
-
-### Authentication
-- `GET /api/login` - Initiate OAuth flow
-- `GET /api/logout` - End user session
-- `GET /api/auth/user` - Get current user
-
-### Videos
-- `GET /api/videos` - Fetch video feed
-- `POST /api/videos` - Upload new video (with multer)
-- `POST /api/videos/:id/view` - Increment view count
-- `POST /api/videos/:id/like` - Like a video
-- `DELETE /api/videos/:id/like` - Unlike a video
-
-### Comments
-- `GET /api/comments/:videoId` - Get video comments
-- `POST /api/comments` - Create comment
-
-### Gifts
-- `GET /api/gift-types` - Get available gifts
-- `POST /api/gifts/send` - Send gift to creator
-
-### Credits
-- `GET /api/credit-packages` - Get YimiCoins packages
-- `POST /api/credits/purchase` - Buy credits
-
-### Dashboard
-- `GET /api/dashboard/stats` - Get creator stats
-- `GET /api/dashboard/videos` - Get creator videos with earnings
-
-### Profile
-- `GET /api/profile/:userId` - Get user profile with videos
-
-## Design System
-
-### Colors
-- **Primary**: Pink/Magenta (#e91e63) - Brand color, CTAs
-- **Gradients**: Pink to purple for hero sections
-- **Typography**: Inter (body), Poppins (headings)
-- **Spacing**: Consistent 4, 6, 8, 12, 16 units
-- **Interactions**: Subtle hover-elevate and active-elevate-2 effects
-
-### Components
-- All components use Shadcn UI primitives
-- Responsive design (mobile-first)
-- Smooth animations and transitions
-- Accessible (WCAG AA contrast)
-
-## Development Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Push database schema
-npm run db:push
-
-# Seed database
-npx tsx server/seed.ts
-```
-
-## Environment Variables
-
-Required secrets (managed by Replit):
-- `DATABASE_URL` - PostgreSQL connection string
-- `SESSION_SECRET` - Session encryption key
-- `REPL_ID` - Replit app ID (for auth)
-- `ISSUER_URL` - OAuth issuer (defaults to Replit)
-
-## Future Enhancements (Phase 2)
-
-- Live streaming with real-time chat
-- Video filters and effects (TikTok-style)
-- AI-powered content moderation
-- Recommendation algorithm
-- Mobile app (React Native)
-- Multiple language support with auto-translation
-- Analytics dashboard
-- Stripe integration for real payments
-- Mobile Money API integration
-- Follow/follower system
-- Notification system
-- Direct messaging
-
-## Recent Changes
-
-**2025-11-05**: Branding - Logo Integration
-- **Logo Officiel**: Intégré le logo néon FreeMind Vision (cyan/magenta avec play button)
-- **Navigation**: Logo dans la barre de navigation avec nom "FreeMind"
-- **Landing Page**: Grand logo animé au centre de la hero section
-- **Responsive**: Optimisé pour tous les écrans (mobile, tablet, desktop)
-
-**2025-11-05**: Production Deployment Fixes
-- **Error Handling**: Complete try-catch wrapper around server initialization
-- **Detailed Logging**: Every startup step now logged for debugging
-- **Health Check Endpoints**: `/health` and `/api/health` for deployment verification
-- **Server Error Handling**: Proper EADDRINUSE detection and graceful exit
-- **Production Ready**: All deployment fixes applied and tested
-- **Documentation**: Created comprehensive DEPLOYMENT.md guide
-
-**2025-11-05**: Phase 2.5 - Social Features
-- **Follow/Followers System**: Complete social network functionality
-  - Follow/unfollow users with dynamic button states
-  - Follower and following counts displayed on profiles
-  - "Following" feed tab to see videos from followed creators only
-  - isFollowing status checks to show correct button state
-  - Real-time updates after follow/unfollow actions
-- **Enhanced Profile Page**:
-  - Follow/Unfollow button with icon indicators
-  - Following count alongside followers count
-  - data-testid attributes for all interactive elements
-- **Enhanced Feed Page**:
-  - "For You" and "Following" tabs for personalized content
-  - Following feed fetches only videos from followed creators
-  - Empty states for when no creators are followed
-- **Database**: New follows table with follower/following relationships
-
-**2025-11-05**: Phase 2 - Real Payment Integration
-- **Stripe Integration**: Full credit card payment processing with Stripe
-  - Payment intent creation for secure transactions (API version 2024-06-20)
-  - Stripe webhook handling with signature verification (production-ready)
-  - Customer management with saved Stripe IDs
-  - Payment method modal for selecting payment options
-  - Dedicated checkout page with Stripe Elements integration
-  - Proper error handling and fallback modes
-- **Mobile Money Support**: Orange Money, MTN Money, Wave payment pages
-  - Dedicated payment pages for each Mobile Money provider
-  - Phone number validation and payment instructions
-  - FCFA currency conversion (1 USD = 655 FCFA)
-  - Mobile Money initiation endpoint with pending payment tracking
-  - Auto-completion simulation for testing (production requires real APIs)
-- **Bank Transfer Support**: ECO BANQUE and other banks
-  - Bank account details display with copy-to-clipboard functionality
-  - Payment reference generation for transaction tracking
-  - Comprehensive wire transfer instructions
-  - FCFA amount display with USD conversion
-- **Database Enhancements**:
-  - Added stripeCustomerId and stripeConnectId to users table
-  - Added paymentMethod and paymentProvider to transactions table
-  - Transaction status management (pending, completed, failed, cancelled)
-  - updateUser and updateTransactionStatus methods in storage layer
-- **Payment Flow**: Seamless multi-method payment experience
-  - Payment method selection modal with 5 options
-  - Route-based payment pages (/checkout, /payment/orange_money, etc.)
-  - Fallback test mode for development without API keys
-  - French language interface for African markets
-- **Security**: Webhook signature verification, encrypted transactions, no stored card data
-- **TODO**: Stripe Connect for creator withdrawals (Phase 3)
-
-**2025-01-05**: Initial MVP implementation
-- Complete database schema with all relations
-- Authentication with Replit Auth (Google, GitHub, Email)
-- Video upload with multer and storage
-- TikTok-style video feed with vertical scrolling
-- Gift system with 6 virtual gifts
-- Credit shop with 6 packages
-- Creator dashboard with revenue tracking (60/40 split)
-- Multi-currency support (FCFA, USD)
-- Responsive UI with Shadcn components
-- All core features functional and tested
+Key capabilities include:
+- Multi-provider authentication and user management.
+- A TikTok-style vertical video feed, content upload, and basic social interactions (likes, comments).
+- A unique monetization system featuring virtual currency (YimiCoins), virtual gifts, and a 60/40 revenue split model favoring creators.
+- A comprehensive creator dashboard for tracking earnings and video performance.
 
 ## User Preferences
 
-- Design: Modern, vibrant, TikTok-inspired
-- Target: Global creators with Africa focus
-- Revenue split: 60% creator / 40% platform
-- Primary currency: FCFA for Africa, USD internationally
+- **Language**: French (Français) as official default
+- **Design**: Modern, vibrant, TikTok-inspired
+- **Target**: Global creators with Africa focus
+- **Revenue split**: 60% creator / 40% platform
+- **Primary currency**: FCFA for Africa, USD internationally
+- **Multi-language**: 7 languages including African languages
+
+## System Architecture
+
+### UI/UX Decisions
+The platform features a modern, vibrant, and responsive design, heavily inspired by TikTok for an intuitive user experience. It utilizes **TailwindCSS** and **Shadcn UI** for component development, ensuring consistency and accessibility (WCAG AA contrast). Key design elements include a primary pink/magenta color palette, Inter and Poppins typography, and subtle hover animations. The interface is built with a mobile-first approach.
+
+### Technical Implementations
+- **Frontend**: Developed with **React** and **TypeScript**, using **Wouter** for routing, **TanStack Query** for data fetching, and **React Hook Form** with Zod for form validation.
+- **Backend**: Built on **Express.js** with **TypeScript**, utilizing **Drizzle ORM** for type-safe PostgreSQL interactions and **Multer** for file uploads. **Passport.js** manages session authentication.
+- **Authentication**: Integrates **Replit Auth** (OpenID Connect) for multi-provider login (Google, GitHub, Email).
+- **Video Platform**: Supports vertical video uploads, a dynamic feed, and basic interaction tracking (views, likes, comments).
+- **Monetization**: Implements a virtual currency (YimiCoins) system, credit packages, and virtual gifts with a 60/40 revenue split for creators. Earnings are displayed in multiple currencies.
+- **Internationalization (i18n)**: Supports 7 languages (French, English, Wolof, Bambara, Swahili, Arabic, Portuguese) using a React Context-based system with a `useTranslations()` hook and persistent language selection.
+- **Payment Processing**: Integrated **Stripe** for credit/debit card payments, dedicated pages for various Mobile Money providers (Orange Money, MTN Money, Wave), and bank transfers. This includes webhook handling, customer management, and secure transaction processing.
+- **Social Features**: Includes a follow/unfollow system with a personalized "Following" feed and enhanced user profiles.
+
+### Core System Design
+- **Database**: **PostgreSQL** (Neon) is used for data persistence, managed by **Drizzle ORM**. The schema includes tables for users, videos, comments, likes, gift types, gifts, credit packages, transactions, and sessions.
+- **Revenue Model**: Creators receive 60% of the value of gifts received (converted to USD), with the platform retaining 40%.
+- **Project Structure**: Organized into `client/` (React frontend), `server/` (Express backend), and `shared/` (shared types and Drizzle schema).
+
+### API Endpoints
+Comprehensive API endpoints are provided for authentication, video management, comments, gift transactions, credit purchases, creator dashboard statistics, and user profile retrieval.
+
+## External Dependencies
+
+- **Replit Auth**: For user authentication (Google, GitHub, Email).
+- **Neon (PostgreSQL)**: Managed cloud database service.
+- **Stripe**: For credit/debit card payment processing.
+- **Mobile Money Providers**: APIs/integrations for Orange Money, MTN Money, Wave (specific API details not listed, but integration is present).
+- **Bank Transfer Systems**: Integration with banking systems for facilitating bank transfers (e.g., ECO BANQUE).

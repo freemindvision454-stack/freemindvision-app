@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Video, DollarSign, Globe, Users, Sparkles, TrendingUp } from "lucide-react";
+import { useTranslations } from "@/lib/i18n";
 import logoUrl from "@assets/1762348677561_1762361963790.jpg";
 
 export default function Landing() {
+  const t = useTranslations();
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -29,19 +32,19 @@ export default function Landing() {
 
           <div className="mb-8 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Global Creator Platform</span>
+            <span className="text-sm font-medium text-primary">{t.landing.tagline}</span>
           </div>
 
           <h1 className="text-5xl md:text-7xl font-poppins font-bold mb-6 bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
-            FreeMind Vision
+            {t.landing.title}
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground mb-4 max-w-2xl mx-auto">
-            Create. Share. Earn.
+            {t.landing.subtitle}
           </p>
           
           <p className="text-base md:text-lg text-muted-foreground mb-12 max-w-3xl mx-auto">
-            Join the global community where creativity meets opportunity. Share your videos, connect with millions, and monetize your passion with YimiCoins.
+            {t.landing.description}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -51,7 +54,7 @@ export default function Landing() {
               onClick={() => window.location.href = "/api/login"}
               data-testid="button-get-started"
             >
-              Get Started Free
+              {t.landing.getStarted}
             </Button>
             <Button 
               size="lg" 
@@ -60,26 +63,26 @@ export default function Landing() {
               onClick={() => window.location.href = "/api/login"}
               data-testid="button-login"
             >
-              Log In
+              {t.landing.login}
             </Button>
           </div>
 
           <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
             <div className="text-center">
               <div className="text-3xl font-poppins font-bold text-primary mb-1">60%</div>
-              <div className="text-sm text-muted-foreground">Creator Earnings</div>
+              <div className="text-sm text-muted-foreground">{t.landing.creatorEarnings}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-poppins font-bold text-primary mb-1">100+</div>
-              <div className="text-sm text-muted-foreground">Countries</div>
+              <div className="text-sm text-muted-foreground">{t.landing.countries}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-poppins font-bold text-primary mb-1">24/7</div>
-              <div className="text-sm text-muted-foreground">Live Support</div>
+              <div className="text-sm text-muted-foreground">{t.landing.liveSupport}</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-poppins font-bold text-primary mb-1">0$</div>
-              <div className="text-sm text-muted-foreground">Setup Fee</div>
+              <div className="text-sm text-muted-foreground">{t.landing.setupFee}</div>
             </div>
           </div>
         </div>
@@ -90,10 +93,10 @@ export default function Landing() {
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-poppins font-bold mb-4">
-              Everything You Need to Succeed
+              {t.landing.featuresTitle}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Built for creators, designed for success. All the tools you need to grow your audience and monetize your content.
+              {t.landing.featuresSubtitle}
             </p>
           </div>
 
@@ -103,9 +106,9 @@ export default function Landing() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <Video className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-poppins font-semibold mb-2">Upload & Share</h3>
+                <h3 className="text-xl font-poppins font-semibold mb-2">{t.landing.uploadShare}</h3>
                 <p className="text-muted-foreground">
-                  Upload short videos in seconds. Share your creativity with a global audience instantly.
+                  {t.landing.uploadDesc}
                 </p>
               </CardContent>
             </Card>
@@ -115,9 +118,9 @@ export default function Landing() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <DollarSign className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-poppins font-semibold mb-2">Earn Real Money</h3>
+                <h3 className="text-xl font-poppins font-semibold mb-2">{t.landing.earnMoney}</h3>
                 <p className="text-muted-foreground">
-                  Keep 60% of all earnings. Get paid in FCFA, USD, or your preferred currency through Mobile Money, PayPal, or bank transfer.
+                  {t.landing.earnDesc}
                 </p>
               </CardContent>
             </Card>
@@ -127,9 +130,9 @@ export default function Landing() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <Globe className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-poppins font-semibold mb-2">Global Reach</h3>
+                <h3 className="text-xl font-poppins font-semibold mb-2">{t.landing.globalReach}</h3>
                 <p className="text-muted-foreground">
-                  Connect with audiences worldwide. Automatic translation helps you reach every corner of the globe.
+                  {t.landing.globalDesc}
                 </p>
               </CardContent>
             </Card>
