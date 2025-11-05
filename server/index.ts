@@ -48,7 +48,10 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    log(`Starting server in ${process.env.NODE_ENV || 'development'} mode...`);
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    console.log(`[STARTUP] NODE_ENV: ${nodeEnv}`);
+    console.log(`[STARTUP] PORT: ${process.env.PORT || '5000'}`);
+    log(`Starting server in ${nodeEnv} mode...`);
     
     const server = await registerRoutes(app);
     log(`Routes registered successfully`);
@@ -65,12 +68,16 @@ app.use((req, res, next) => {
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
     const isDevelopment = process.env.NODE_ENV !== "production";
+    console.log(`[STARTUP] isDevelopment: ${isDevelopment}`);
+    
     if (isDevelopment) {
       log(`Setting up Vite for development...`);
       await setupVite(app, server);
     } else {
       log(`Serving static files for production...`);
+      console.log(`[STARTUP] Static files directory: ${process.cwd()}/dist/public`);
       serveStatic(app);
+      log(`Static files setup complete`);
     }
 
     // ALWAYS serve the app on the port specified in the environment variable PORT
@@ -91,6 +98,7 @@ app.use((req, res, next) => {
     });
 
     // Start server and wait for it to be ready
+    console.log(`[STARTUP] Attempting to bind to ${port} on 0.0.0.0`);
     await new Promise<void>((resolve, reject) => {
       server.listen({
         port,
@@ -98,22 +106,28 @@ app.use((req, res, next) => {
         reusePort: true,
       }, (err?: Error) => {
         if (err) {
+          console.error(`[STARTUP] Failed to bind to port ${port}:`, err);
           log(`ERROR: Failed to start server: ${err.message}`);
           reject(err);
           return;
         }
+        console.log(`[STARTUP] Successfully bound to port ${port}`);
         log(`✓ Server successfully started on port ${port}`);
         log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
         log(`✓ Ready to accept connections`);
+        console.log(`[STARTUP] Server is ready and listening`);
         
         // Signal that server is ready (for deployment platforms)
         if (process.send) {
+          console.log(`[STARTUP] Sending 'ready' signal to parent process`);
           process.send('ready');
         }
         
         resolve();
       });
     });
+    
+    console.log(`[STARTUP] Initialization complete, server running`);
 
   } catch (error: any) {
     log(`FATAL ERROR during server initialization: ${error.message}`);
