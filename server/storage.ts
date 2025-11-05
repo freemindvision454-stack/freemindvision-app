@@ -25,7 +25,7 @@ import {
   type InsertTransaction,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, or } from "drizzle-orm";
+import { eq, desc, sql, and, or, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (Replit Auth required)
@@ -272,11 +272,11 @@ export class DatabaseStorage implements IStorage {
 
     const followingIds = followingUsers.map(f => f.id);
 
-    // Get videos from followed creators
+    // Get videos from followed creators using inArray
     return await db
       .select()
       .from(videos)
-      .where(sql`${videos.creatorId} = ANY(${followingIds})`)
+      .where(inArray(videos.creatorId, followingIds))
       .orderBy(desc(videos.createdAt))
       .limit(limit);
   }
