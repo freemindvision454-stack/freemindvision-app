@@ -2,7 +2,10 @@ import AppLayout from "@/components/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslations, useI18n } from "@/lib/i18n";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { Link } from "wouter";
+import { useState } from "react";
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -14,67 +17,81 @@ import {
   ChevronRight
 } from "lucide-react";
 
+interface SettingItem {
+  icon: any;
+  label: string;
+  description: string;
+  href: string;
+  testId: string;
+  badge?: string;
+  onClick?: () => void;
+}
+
 export default function Settings() {
   const { user } = useAuth();
+  const t = useTranslations();
+  const { currentLanguage } = useI18n();
+  const [languageDialogOpen, setLanguageDialogOpen] = useState(false);
 
-  const settingSections = [
+  const settingSections: Array<{ title: string; items: SettingItem[] }> = [
     {
-      title: "Creator Tools",
+      title: t.settings.creatorTools,
       items: [
         {
           icon: LayoutDashboard,
-          label: "Creator Dashboard",
-          description: "View your earnings, stats, and video performance",
+          label: t.settings.dashboardTitle,
+          description: t.settings.dashboardDesc,
           href: "/dashboard",
           testId: "link-dashboard",
         },
         {
           icon: ShoppingBag,
-          label: "Credit Shop",
-          description: "Purchase YimiCoins to support creators",
+          label: t.settings.shopTitle,
+          description: t.settings.shopDesc,
           href: "/shop",
           testId: "link-shop",
         },
       ],
     },
     {
-      title: "Account",
+      title: t.settings.account,
       items: [
         {
           icon: User,
-          label: "Profile",
-          description: "Manage your profile and personal information",
+          label: t.settings.profileTitle,
+          description: t.settings.profileDesc,
           href: `/profile/${user?.id}`,
           testId: "link-profile-settings",
         },
         {
           icon: Globe,
-          label: "Language",
-          description: "Change app language (Français, English, Wolof, etc.)",
+          label: t.settings.languageTitle,
+          description: t.settings.languageDesc,
           href: "#language",
           testId: "button-language",
-          badge: "Français",
+          badge: currentLanguage.nativeName,
+          onClick: () => setLanguageDialogOpen(true),
         },
       ],
     },
     {
-      title: "Preferences",
+      title: t.settings.preferences,
       items: [
         {
           icon: Bell,
-          label: "Notifications",
-          description: "Manage notification preferences",
+          label: t.settings.notificationsTitle,
+          description: t.settings.notificationsDesc,
           href: "#notifications",
           testId: "link-notifications",
-          badge: "Coming Soon",
+          badge: t.common.comingSoon,
         },
         {
           icon: Shield,
-          label: "Privacy & Security",
-          description: "Control your privacy and security settings",
+          label: t.settings.privacyTitle,
+          description: t.settings.privacyDesc,
           href: "#privacy",
           testId: "link-privacy",
-          badge: "Coming Soon",
+          badge: t.common.comingSoon,
         },
       ],
     },
@@ -82,11 +99,13 @@ export default function Settings() {
 
   return (
     <AppLayout>
+      <LanguageSelector open={languageDialogOpen} onOpenChange={setLanguageDialogOpen} />
+      
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-poppins font-bold mb-2">Settings</h1>
+          <h1 className="text-4xl font-poppins font-bold mb-2">{t.settings.title}</h1>
           <p className="text-lg text-muted-foreground">
-            Manage your account and preferences
+            {t.settings.subtitle}
           </p>
         </div>
 
@@ -129,7 +148,11 @@ export default function Settings() {
 
                   if (isExternal) {
                     return (
-                      <div key={item.href} data-testid={item.testId}>
+                      <div 
+                        key={item.href} 
+                        data-testid={item.testId}
+                        onClick={item.onClick}
+                      >
                         {content}
                       </div>
                     );
@@ -148,29 +171,29 @@ export default function Settings() {
           <div className="pt-8 border-t">
             <Card className="bg-muted/50">
               <CardHeader>
-                <CardTitle>Account Information</CardTitle>
-                <CardDescription>Your FreeMind Vision account details</CardDescription>
+                <CardTitle>{t.settings.accountInfo}</CardTitle>
+                <CardDescription>{t.settings.accountInfoDesc}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Email</span>
+                  <span className="text-sm text-muted-foreground">{t.settings.email}</span>
                   <span className="text-sm font-medium">{user?.email}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Account Type</span>
+                  <span className="text-sm text-muted-foreground">{t.settings.accountType}</span>
                   <span className="text-sm font-medium">
-                    {user?.isCreator ? "Creator" : "User"}
+                    {user?.isCreator ? t.settings.creator : t.settings.user}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">YimiCoins Balance</span>
+                  <span className="text-sm text-muted-foreground">{t.settings.balance}</span>
                   <span className="text-sm font-medium text-primary">
                     {(user?.creditBalance || 0).toLocaleString()}
                   </span>
                 </div>
                 {user?.isCreator && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Total Earnings</span>
+                    <span className="text-sm text-muted-foreground">{t.settings.totalEarnings}</span>
                     <span className="text-sm font-medium text-primary">
                       ${(user?.totalEarnings || 0).toFixed(2)}
                     </span>
@@ -187,7 +210,7 @@ export default function Settings() {
               onClick={() => window.location.href = "/api/logout"}
               data-testid="button-logout-settings"
             >
-              Logout
+              {t.nav.logout}
             </Button>
           </div>
         </div>

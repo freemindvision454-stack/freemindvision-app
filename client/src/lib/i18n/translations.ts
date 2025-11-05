@@ -1,0 +1,885 @@
+import { Language } from "./context";
+
+export interface Translations {
+  // Navigation
+  nav: {
+    home: string;
+    upload: string;
+    live: string;
+    messages: string;
+    settings: string;
+    dashboard: string;
+    shop: string;
+    profile: string;
+    logout: string;
+  };
+
+  // Landing page
+  landing: {
+    tagline: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    getStarted: string;
+    login: string;
+    creatorEarnings: string;
+    countries: string;
+    liveSupport: string;
+    setupFee: string;
+    featuresTitle: string;
+    featuresSubtitle: string;
+    uploadShare: string;
+    uploadDesc: string;
+    earnMoney: string;
+    earnDesc: string;
+    globalReach: string;
+    globalDesc: string;
+  };
+
+  // Common
+  common: {
+    comingSoon: string;
+    yimiCoins: string;
+    credits: string;
+    loading: string;
+    error: string;
+    success: string;
+    cancel: string;
+    save: string;
+    delete: string;
+    edit: string;
+    share: string;
+    like: string;
+    comment: string;
+    send: string;
+    follow: string;
+    following: string;
+    unfollow: string;
+    followers: string;
+  };
+
+  // Settings
+  settings: {
+    title: string;
+    subtitle: string;
+    creatorTools: string;
+    account: string;
+    preferences: string;
+    dashboardTitle: string;
+    dashboardDesc: string;
+    shopTitle: string;
+    shopDesc: string;
+    profileTitle: string;
+    profileDesc: string;
+    languageTitle: string;
+    languageDesc: string;
+    notificationsTitle: string;
+    notificationsDesc: string;
+    privacyTitle: string;
+    privacyDesc: string;
+    accountInfo: string;
+    accountInfoDesc: string;
+    email: string;
+    accountType: string;
+    balance: string;
+    totalEarnings: string;
+    creator: string;
+    user: string;
+  };
+
+  // Live
+  live: {
+    title: string;
+    subtitle: string;
+    hdStreaming: string;
+    hdStreamingDesc: string;
+    realTimeChat: string;
+    realTimeChatDesc: string;
+    liveGifts: string;
+    liveGiftsDesc: string;
+    phase2Feature: string;
+    phase2Desc: string;
+    startStream: string;
+    viewStreams: string;
+  };
+
+  // Messages
+  messages: {
+    title: string;
+    subtitle: string;
+    privateChats: string;
+    privateChatsDesc: string;
+    notifications: string;
+    notificationsDesc: string;
+    spamProtection: string;
+    spamProtectionDesc: string;
+    phase2Feature: string;
+    phase2Desc: string;
+    sendMessage: string;
+    viewInbox: string;
+  };
+}
+
+export const translations: Record<Language, Translations> = {
+  fr: {
+    nav: {
+      home: "Accueil",
+      upload: "Publier",
+      live: "Live",
+      messages: "Messages",
+      settings: "Paramètres",
+      dashboard: "Tableau de bord",
+      shop: "Boutique",
+      profile: "Profil",
+      logout: "Déconnexion",
+    },
+    landing: {
+      tagline: "Plateforme mondiale pour créateurs",
+      title: "FreeMind Vision",
+      subtitle: "Créez. Partagez. Gagnez.",
+      description: "Rejoignez la communauté mondiale où la créativité rencontre l'opportunité. Partagez vos vidéos, connectez-vous avec des millions de personnes et monétisez votre passion avec YimiCoins.",
+      getStarted: "Commencer gratuitement",
+      login: "Se connecter",
+      creatorEarnings: "Revenus créateur",
+      countries: "Pays",
+      liveSupport: "Support 24/7",
+      setupFee: "Frais d'installation",
+      featuresTitle: "Tout ce dont vous avez besoin pour réussir",
+      featuresSubtitle: "Conçu pour les créateurs, pensé pour le succès. Tous les outils nécessaires pour développer votre audience et monétiser votre contenu.",
+      uploadShare: "Publier et Partager",
+      uploadDesc: "Téléchargez des vidéos courtes en quelques secondes. Partagez votre créativité avec une audience mondiale instantanément.",
+      earnMoney: "Gagnez de l'argent réel",
+      earnDesc: "Gardez 60% de tous vos revenus. Soyez payé en FCFA, USD ou votre devise préférée via Mobile Money, PayPal ou virement bancaire.",
+      globalReach: "Portée mondiale",
+      globalDesc: "Connectez-vous avec des audiences du monde entier. La traduction automatique vous aide à atteindre tous les coins du globe.",
+    },
+    common: {
+      comingSoon: "Bientôt disponible",
+      yimiCoins: "YimiCoins",
+      credits: "Crédits",
+      loading: "Chargement...",
+      error: "Erreur",
+      success: "Succès",
+      cancel: "Annuler",
+      save: "Enregistrer",
+      delete: "Supprimer",
+      edit: "Modifier",
+      share: "Partager",
+      like: "J'aime",
+      comment: "Commenter",
+      send: "Envoyer",
+      follow: "Suivre",
+      following: "Abonné",
+      unfollow: "Ne plus suivre",
+      followers: "Abonnés",
+    },
+    settings: {
+      title: "Paramètres",
+      subtitle: "Gérez votre compte et vos préférences",
+      creatorTools: "Outils créateur",
+      account: "Compte",
+      preferences: "Préférences",
+      dashboardTitle: "Tableau de bord créateur",
+      dashboardDesc: "Consultez vos revenus, statistiques et performances vidéo",
+      shopTitle: "Boutique de crédits",
+      shopDesc: "Achetez des YimiCoins pour soutenir les créateurs",
+      profileTitle: "Profil",
+      profileDesc: "Gérez votre profil et informations personnelles",
+      languageTitle: "Langue",
+      languageDesc: "Changer la langue de l'application (Français, English, Wolof, etc.)",
+      notificationsTitle: "Notifications",
+      notificationsDesc: "Gérez vos préférences de notification",
+      privacyTitle: "Confidentialité et sécurité",
+      privacyDesc: "Contrôlez vos paramètres de confidentialité et sécurité",
+      accountInfo: "Informations du compte",
+      accountInfoDesc: "Détails de votre compte FreeMind Vision",
+      email: "Email",
+      accountType: "Type de compte",
+      balance: "Solde YimiCoins",
+      totalEarnings: "Revenus totaux",
+      creator: "Créateur",
+      user: "Utilisateur",
+    },
+    live: {
+      title: "Streaming en direct",
+      subtitle: "Diffusez en direct avec votre audience en temps réel. Partagez des moments, connectez-vous avec vos fans et gagnez des cadeaux pendant vos streams.",
+      hdStreaming: "Streaming HD",
+      hdStreamingDesc: "Diffusez en haute qualité avec un débit adaptatif pour la meilleure expérience spectateur",
+      realTimeChat: "Chat en temps réel",
+      realTimeChatDesc: "Interagissez avec vos spectateurs via le chat en direct et répondez aux commentaires instantanément",
+      liveGifts: "Cadeaux en direct",
+      liveGiftsDesc: "Recevez des cadeaux des spectateurs pendant votre stream et gagnez de l'argent en temps réel",
+      phase2Feature: "Fonctionnalité Phase 2",
+      phase2Desc: "Le streaming en direct est actuellement en développement et sera disponible dans la prochaine mise à jour majeure. Restez à l'écoute pour les annonces!",
+      startStream: "Démarrer le live",
+      viewStreams: "Voir les lives",
+    },
+    messages: {
+      title: "Messages directs",
+      subtitle: "Connectez-vous avec vos fans et autres créateurs via la messagerie privée. Construisez des relations et collaborez.",
+      privateChats: "Chats privés",
+      privateChatsDesc: "Envoyez des messages directs aux autres utilisateurs avec confidentialité et chiffrement complets",
+      notifications: "Notifications",
+      notificationsDesc: "Recevez des notifications instantanées lorsque vous recevez de nouveaux messages ou réponses",
+      spamProtection: "Protection anti-spam",
+      spamProtectionDesc: "Filtres avancés pour vous protéger du spam et des messages indésirables",
+      phase2Feature: "Fonctionnalité Phase 2",
+      phase2Desc: "La messagerie directe est actuellement en développement et sera disponible dans la prochaine mise à jour majeure. Vous pourrez discuter avec les créateurs et fans en toute sécurité.",
+      sendMessage: "Envoyer un message",
+      viewInbox: "Voir la boîte de réception",
+    },
+  },
+  en: {
+    nav: {
+      home: "Home",
+      upload: "Upload",
+      live: "Live",
+      messages: "Messages",
+      settings: "Settings",
+      dashboard: "Dashboard",
+      shop: "Shop",
+      profile: "Profile",
+      logout: "Logout",
+    },
+    landing: {
+      tagline: "Global Creator Platform",
+      title: "FreeMind Vision",
+      subtitle: "Create. Share. Earn.",
+      description: "Join the global community where creativity meets opportunity. Share your videos, connect with millions, and monetize your passion with YimiCoins.",
+      getStarted: "Get Started Free",
+      login: "Log In",
+      creatorEarnings: "Creator Earnings",
+      countries: "Countries",
+      liveSupport: "Live Support",
+      setupFee: "Setup Fee",
+      featuresTitle: "Everything You Need to Succeed",
+      featuresSubtitle: "Built for creators, designed for success. All the tools you need to grow your audience and monetize your content.",
+      uploadShare: "Upload & Share",
+      uploadDesc: "Upload short videos in seconds. Share your creativity with a global audience instantly.",
+      earnMoney: "Earn Real Money",
+      earnDesc: "Keep 60% of all earnings. Get paid in FCFA, USD, or your preferred currency through Mobile Money, PayPal, or bank transfer.",
+      globalReach: "Global Reach",
+      globalDesc: "Connect with audiences worldwide. Automatic translation helps you reach every corner of the globe.",
+    },
+    common: {
+      comingSoon: "Coming Soon",
+      yimiCoins: "YimiCoins",
+      credits: "Credits",
+      loading: "Loading...",
+      error: "Error",
+      success: "Success",
+      cancel: "Cancel",
+      save: "Save",
+      delete: "Delete",
+      edit: "Edit",
+      share: "Share",
+      like: "Like",
+      comment: "Comment",
+      send: "Send",
+      follow: "Follow",
+      following: "Following",
+      unfollow: "Unfollow",
+      followers: "Followers",
+    },
+    settings: {
+      title: "Settings",
+      subtitle: "Manage your account and preferences",
+      creatorTools: "Creator Tools",
+      account: "Account",
+      preferences: "Preferences",
+      dashboardTitle: "Creator Dashboard",
+      dashboardDesc: "View your earnings, stats, and video performance",
+      shopTitle: "Credit Shop",
+      shopDesc: "Purchase YimiCoins to support creators",
+      profileTitle: "Profile",
+      profileDesc: "Manage your profile and personal information",
+      languageTitle: "Language",
+      languageDesc: "Change app language (Français, English, Wolof, etc.)",
+      notificationsTitle: "Notifications",
+      notificationsDesc: "Manage notification preferences",
+      privacyTitle: "Privacy & Security",
+      privacyDesc: "Control your privacy and security settings",
+      accountInfo: "Account Information",
+      accountInfoDesc: "Your FreeMind Vision account details",
+      email: "Email",
+      accountType: "Account Type",
+      balance: "YimiCoins Balance",
+      totalEarnings: "Total Earnings",
+      creator: "Creator",
+      user: "User",
+    },
+    live: {
+      title: "Live Streaming",
+      subtitle: "Go live with your audience in real-time. Share moments, connect with fans, and earn gifts during your streams.",
+      hdStreaming: "HD Streaming",
+      hdStreamingDesc: "Stream in high quality with adaptive bitrate for the best viewer experience",
+      realTimeChat: "Real-time Chat",
+      realTimeChatDesc: "Interact with your viewers through live chat and respond to comments instantly",
+      liveGifts: "Live Gifts",
+      liveGiftsDesc: "Receive gifts from viewers during your stream and earn money in real-time",
+      phase2Feature: "Phase 2 Feature",
+      phase2Desc: "Live streaming is currently in development and will be available in the next major update. Stay tuned for announcements!",
+      startStream: "Start Live Stream",
+      viewStreams: "View Live Streams",
+    },
+    messages: {
+      title: "Direct Messages",
+      subtitle: "Connect with your fans and fellow creators through private messaging. Build relationships and collaborate.",
+      privateChats: "Private Chats",
+      privateChatsDesc: "Send direct messages to other users with full privacy and encryption",
+      notifications: "Notifications",
+      notificationsDesc: "Get instant notifications when you receive new messages or replies",
+      spamProtection: "Spam Protection",
+      spamProtectionDesc: "Advanced filters to protect you from spam and unwanted messages",
+      phase2Feature: "Phase 2 Feature",
+      phase2Desc: "Direct messaging is currently in development and will be available in the next major update. You'll be able to chat with creators and fans securely.",
+      sendMessage: "Send Message",
+      viewInbox: "View Inbox",
+    },
+  },
+  // Wolof (Senegal, Gambia)
+  wo: {
+    nav: {
+      home: "Kër",
+      upload: "Yeb",
+      live: "Ci waxtu bi",
+      messages: "Bataaxal",
+      settings: "Yeesal",
+      dashboard: "Tablo",
+      shop: "Boutique",
+      profile: "Profil",
+      logout: "Génn",
+    },
+    landing: {
+      tagline: "Plateforme bu créateurs ak àdduna",
+      title: "FreeMind Vision",
+      subtitle: "Sos. Weccee. Ànd.",
+      description: "Bokk ci komunote bu àdduna bi creativity di jagleel ak opportunité. Weccee sa vidéo yi, lëkkaloo ak millions, te monétiser sa passion ak YimiCoins.",
+      getStarted: "Tambali bu am",
+      login: "Dugg",
+      creatorEarnings: "60%",
+      countries: "Réew yi",
+      liveSupport: "Support 24/7",
+      setupFee: "Frais d'installation",
+      featuresTitle: "Lépp lu la war a sod ngir réussir",
+      featuresSubtitle: "Ñu koo sos ngir créateurs, ñu koo xam ci réussite. Lépp outil yi nga soxla ngir yàggal sa audience te monétiser sa contenu.",
+      uploadShare: "Yeb te Weccee",
+      uploadDesc: "Yeb vidéo yu gaaw ci ay seconds. Weccee sa créativité ak audience bu àdduna ci waxtu bi.",
+      earnMoney: "Ànd xaalis bu baax",
+      earnDesc: "Amul 60% ci ay ngir lépp lu nga ànd. Njël xaalis ci FCFA, USD wala monnaie bu la bëgg ak Mobile Money, PayPal wala virement bancaire.",
+      globalReach: "Portée bu àdduna",
+      globalDesc: "Lëkkaloo ak audiences ci àdduna. Traduction automatique di la dimali ngir jot ci lépp kaw bu àdduna.",
+    },
+    common: {
+      comingSoon: "Dina ñëw",
+      yimiCoins: "YimiCoins",
+      credits: "Crédit",
+      loading: "Dafay yeeg...",
+      error: "Njumte",
+      success: "Réew",
+      cancel: "Faylu",
+      save: "Lakk",
+      delete: "Fey",
+      edit: "Soppi",
+      share: "Weccee",
+      like: "Bëgg",
+      comment: "Xol",
+      send: "Yónn",
+      follow: "Topp",
+      following: "Dafay topp",
+      unfollow: "Bàyyi topp",
+      followers: "Ku la topp",
+    },
+    settings: {
+      title: "Yeesal",
+      subtitle: "Yónneel sa compte ak yoon sa xam-xam",
+      creatorTools: "Jumtukaay bu créateur",
+      account: "Compte",
+      preferences: "Yoon sa xam-xam",
+      dashboardTitle: "Tableau de bord bu créateur",
+      dashboardDesc: "Xool sa revenus, statistiques ak performance bu sa vidéo",
+      shopTitle: "Boutique bu crédit",
+      shopDesc: "Jënd YimiCoins ngir walluwaalee créateurs",
+      profileTitle: "Profil",
+      profileDesc: "Yónneel sa profil ak xam-xam bu sa bopp",
+      languageTitle: "Làkk",
+      languageDesc: "Soppi làkk bu application (Français, English, Wolof, etc.)",
+      notificationsTitle: "Notifications",
+      notificationsDesc: "Yónneel yoon sa notifications",
+      privacyTitle: "Sutura ak sécurité",
+      privacyDesc: "Contrôler yeesal yi sutura ak sécurité",
+      accountInfo: "Xam-xam bu compte",
+      accountInfoDesc: "Détails bu sa compte FreeMind Vision",
+      email: "Email",
+      accountType: "Génu compte",
+      balance: "Solde YimiCoins",
+      totalEarnings: "Revenus bu lépp",
+      creator: "Créateur",
+      user: "Jëfandikukat",
+    },
+    live: {
+      title: "Streaming ci waxtu bi",
+      subtitle: "Def live ak sa audience ci temps réel. Weccee xeew yi, lëkkaloo ak fans yi te ànd cadeau ci sa stream.",
+      hdStreaming: "Streaming HD",
+      hdStreamingDesc: "Stream ci qualité bu baax ak débit adaptatif ngir meilleure expérience spectateur",
+      realTimeChat: "Chat ci waxtu bi",
+      realTimeChatDesc: "Lëkkaloo ak sa spectateurs ci chat ci waxtu bi te waxtaan ci commentaires ci saaf",
+      liveGifts: "Cadeau ci waxtu bi",
+      liveGiftsDesc: "Jël cadeau ci spectateurs ci sa stream te ànd xaalis ci waxtu bi",
+      phase2Feature: "Fonctionnalité Phase 2",
+      phase2Desc: "Streaming ci waxtu bi dafay def ci développement te dina am ci mise à jour bu mag bu ñëw. Topp ngir annonces!",
+      startStream: "Tambali live",
+      viewStreams: "Xool lives",
+    },
+    messages: {
+      title: "Messages directs",
+      subtitle: "Lëkkaloo ak sa fans ak yeneen créateurs ci messagerie privée. Def relations te collaborer.",
+      privateChats: "Chats privés",
+      privateChatsDesc: "Yónn messages directs ci yeneen jëfandikukat ak sutura ak chiffrement bu lépp",
+      notifications: "Notifications",
+      notificationsDesc: "Jël notifications instantanées bu nga jël messages bu bees wala réponses",
+      spamProtection: "Protection anti-spam",
+      spamProtectionDesc: "Filtres avancés ngir walluwaalee sa bopp ci spam ak messages yu ñu bëggul",
+      phase2Feature: "Fonctionnalité Phase 2",
+      phase2Desc: "Messagerie directe dafay def ci développement te dina am ci mise à jour bu mag bu ñëw. Dinga mën a wax ak créateurs ak fans ci sécurité.",
+      sendMessage: "Yónn message",
+      viewInbox: "Xool boîte bu réception",
+    },
+  },
+  // Bambara (Mali)
+  bm: {
+    nav: {
+      home: "So",
+      upload: "Bila",
+      live: "Sisan",
+      messages: "Cikan",
+      settings: "Labɛn",
+      dashboard: "Dashboard",
+      shop: "Dukanni",
+      profile: "Profil",
+      logout: "Bɔ",
+    },
+    landing: {
+      tagline: "Duniɲa ka créateurs platform",
+      title: "FreeMind Vision",
+      subtitle: "Dilan. Tila. Sɔrɔ.",
+      description: "Don duniɲa ka jamana na, yɔrɔ min na dɔnkili bɛ sɔrɔ ni seko ye. I ka vidéo tila, i bɛ ɲɔgɔn sɔrɔ ni miliɔn caman ye, ka i ka diya wale ni YimiCoins ye.",
+      getStarted: "Daminɛ fu",
+      login: "Don a kɔnɔ",
+      creatorEarnings: "60%",
+      countries: "Jamana",
+      liveSupport: "Dɛmɛ 24/7",
+      setupFee: "Installation sara",
+      featuresTitle: "Fɛn bɛɛ i mago bɛ min na walasa ka ɲɛtaa sɔrɔ",
+      featuresSubtitle: "Dilanna créateurs ma, labɛnna ɲɛtaa ma. Baarakɛminɛn bɛɛ i mago bɛ min na walasa ka i ka audience yiriwa ani ka i ka kɔnɔkow wale.",
+      uploadShare: "Bila ani Tila",
+      uploadDesc: "Vidéo surunin bila sekondi damadɔ kɔnɔ. I ka dɔnkili tila ni duniɲa audience ye sabu kelen na.",
+      earnMoney: "Wariko sɔrɔ",
+      earnDesc: "I bɛ 60% to i ka sɔrɔko bɛɛ la. Sara sɔrɔ ni FCFA, USD walima wari min bɛ ka lɔ̀n i ma ni Mobile Money, PayPal walima bank transfer ye.",
+      globalReach: "Duniɲa sɔrɔli",
+      globalDesc: "Ɲɔgɔn sɔrɔ ni duniɲa mɔgɔ caman ye. Baarakɛ min bɛ kalan falen ka kɛ a yɛrɛma, o b'i dɛmɛ ka duniɲa yɔrɔ bɛɛ sɔrɔ.",
+    },
+    common: {
+      comingSoon: "A bena na",
+      yimiCoins: "YimiCoins",
+      credits: "Crédit",
+      loading: "A bɛ ka wuli...",
+      error: "Fili",
+      success: "Ɲɛtaa",
+      cancel: "Ban",
+      save: "Mara",
+      delete: "Bɔ",
+      edit: "Yɛlɛma",
+      share: "Tila",
+      like: "Ka diya",
+      comment: "Kuma",
+      send: "Ci",
+      follow: "Tugu",
+      following: "Bɛ ka tugu",
+      unfollow: "Tuguya ban",
+      followers: "Tugucɛ",
+    },
+    settings: {
+      title: "Labɛn",
+      subtitle: "I ka compte ni i ka filiɲumanya ɲɛnabɔ",
+      creatorTools: "Créateur baarakɛminɛn",
+      account: "Compte",
+      preferences: "Fili",
+      dashboardTitle: "Créateur ka tableau de bord",
+      dashboardDesc: "I ka sɔrɔko, jateminɛ ani i ka vidéo baara lajɛ",
+      shopTitle: "Crédit dukanni",
+      shopDesc: "YimiCoins san walasa ka créateurs dɛmɛ",
+      profileTitle: "Profil",
+      profileDesc: "I ka profil ni i yɛrɛ ka kunnafoni ɲɛnabɔ",
+      languageTitle: "Kan",
+      languageDesc: "Application kan yɛlɛma (Français, English, Wolof, etc.)",
+      notificationsTitle: "Kunnafoniw",
+      notificationsDesc: "I ka notification filiɲumanya ɲɛnabɔ",
+      privacyTitle: "Gundoya ani lakanaɲɛ",
+      privacyDesc: "I ka gundoya ani lakanaɲɛ labɛn ɲɛnabɔ",
+      accountInfo: "Compte kunnafoniw",
+      accountInfoDesc: "I ka FreeMind Vision compte kunnafoniw",
+      email: "Email",
+      accountType: "Compte sugandi",
+      balance: "YimiCoins hakɛ",
+      totalEarnings: "Sɔrɔko bɛɛ",
+      creator: "Créateur",
+      user: "Baarakɛla",
+    },
+    live: {
+      title: "Streaming sisan",
+      subtitle: "Kɛ live ni i ka audience ye sisan. Kow tila, ɲɔgɔn sɔrɔ ni fans ye ani wari sɔrɔ i ka stream siratigɛ la.",
+      hdStreaming: "Streaming HD",
+      hdStreamingDesc: "Stream kɛ ni ɲuman ye ni débit adaptatif ye walasa ka spectateur ka ɲuman sɔrɔ",
+      realTimeChat: "Chat sisan",
+      realTimeChatDesc: "Ɲɔgɔn fɔ ni i ka spectateurs ye chat sisan na ani ka jaabi da commentaires ma sabu kelen na",
+      liveGifts: "Sisan somaw",
+      liveGiftsDesc: "Somaw sɔrɔ spectateurs fɛ i ka stream siratigɛ la ani ka wari sɔrɔ sisan",
+      phase2Feature: "Phase 2 fɛɛrɛ",
+      phase2Desc: "Streaming sisan bɛ ka kɛ sisan ani a bena sɔrɔ yɛlɛmako kura na. Aw ye aw ma i na annonces la!",
+      startStream: "Live daminɛ",
+      viewStreams: "Lives lajɛ",
+    },
+    messages: {
+      title: "Messages directs",
+      subtitle: "Ɲɔgɔn sɔrɔ ni i ka fans ani créateurs tɔw ye messagerie privée fɛ. Jɛɲɔgɔnya dilan ani ka baara kɛ ɲɔgɔn fɛ.",
+      privateChats: "Chats privés",
+      privateChatsDesc: "Messages directs ci baarakɛla wɛrɛw ma ni gundoya ani chiffrement ye",
+      notifications: "Kunnafoniw",
+      notificationsDesc: "Notifications sɔrɔ sabu kelen na ni i ye messages kuraw walima jaabi sɔrɔ",
+      spamProtection: "Spam kɔlɔsili",
+      spamProtectionDesc: "Filtrɛ caman walasa ka i marala spam na ani ka messages minnu tɛ ɲi",
+      phase2Feature: "Phase 2 fɛɛrɛ",
+      phase2Desc: "Messagerie directe bɛ ka kɛ sisan ani a bena sɔrɔ yɛlɛmako kura na. I bena se ka kuma kɛ ni créateurs ani fans ye ni lakanaɲɛ ye.",
+      sendMessage: "Message ci",
+      viewInbox: "Boîte de réception lajɛ",
+    },
+  },
+  // Swahili (Kenya, Tanzania)
+  sw: {
+    nav: {
+      home: "Nyumbani",
+      upload: "Pakia",
+      live: "Moja kwa moja",
+      messages: "Ujumbe",
+      settings: "Mipangilio",
+      dashboard: "Dashibodi",
+      shop: "Duka",
+      profile: "Wasifu",
+      logout: "Toka",
+    },
+    landing: {
+      tagline: "Jukwaa la Waundaji Ulimwenguni",
+      title: "FreeMind Vision",
+      subtitle: "Unda. Shiriki. Pata.",
+      description: "Jiunge na jamii ya kimataifa ambapo ubunifu unakutana na fursa. Shiriki video zako, unganisha na mamilioni, na pata mapato kutoka kwa shauku yako na YimiCoins.",
+      getStarted: "Anza Bure",
+      login: "Ingia",
+      creatorEarnings: "60%",
+      countries: "Nchi",
+      liveSupport: "Msaada 24/7",
+      setupFee: "Ada ya Kuanzisha",
+      featuresTitle: "Kila Kitu Unachohitaji Kufanikiwa",
+      featuresSubtitle: "Imejengwa kwa waundaji, imebuniwa kwa ufanisi. Zana zote unazohitaji kukuza hadhira yako na kupata mapato kutoka kwa maudhui yako.",
+      uploadShare: "Pakia na Shiriki",
+      uploadDesc: "Pakia video fupi kwa sekunde. Shiriki ubunifu wako na hadhira ya kimataifa papo hapo.",
+      earnMoney: "Pata Pesa Halisi",
+      earnDesc: "Weka 60% ya mapato yako yote. Lipwa kwa FCFA, USD, au sarafu unayopendelea kupitia Mobile Money, PayPal, au uhamisho wa benki.",
+      globalReach: "Fikia Ulimwengu",
+      globalDesc: "Unganisha na hadhira duniani kote. Tafsiri ya kiotomatiki inakusaidia kufikia kila pembe ya dunia.",
+    },
+    common: {
+      comingSoon: "Inakuja Hivi Karibuni",
+      yimiCoins: "YimiCoins",
+      credits: "Mikopo",
+      loading: "Inapakia...",
+      error: "Kosa",
+      success: "Mafanikio",
+      cancel: "Ghairi",
+      save: "Hifadhi",
+      delete: "Futa",
+      edit: "Hariri",
+      share: "Shiriki",
+      like: "Penda",
+      comment: "Wasiliana",
+      send: "Tuma",
+      follow: "Fuata",
+      following: "Unafuata",
+      unfollow: "Acha Kufuata",
+      followers: "Wafuasi",
+    },
+    settings: {
+      title: "Mipangilio",
+      subtitle: "Dhibiti akaunti yako na mapendeleo",
+      creatorTools: "Zana za Muundaji",
+      account: "Akaunti",
+      preferences: "Mapendeleo",
+      dashboardTitle: "Dashibodi ya Muundaji",
+      dashboardDesc: "Tazama mapato yako, takwimu, na utendaji wa video",
+      shopTitle: "Duka la Mikopo",
+      shopDesc: "Nunua YimiCoins ili kuunga mkono waundaji",
+      profileTitle: "Wasifu",
+      profileDesc: "Dhibiti wasifu wako na taarifa binafsi",
+      languageTitle: "Lugha",
+      languageDesc: "Badilisha lugha ya programu (Français, English, Wolof, n.k.)",
+      notificationsTitle: "Arifa",
+      notificationsDesc: "Dhibiti mapendeleo ya arifa",
+      privacyTitle: "Faragha na Usalama",
+      privacyDesc: "Dhibiti mipangilio yako ya faragha na usalama",
+      accountInfo: "Taarifa za Akaunti",
+      accountInfoDesc: "Maelezo ya akaunti yako ya FreeMind Vision",
+      email: "Barua pepe",
+      accountType: "Aina ya Akaunti",
+      balance: "Salio la YimiCoins",
+      totalEarnings: "Jumla ya Mapato",
+      creator: "Muundaji",
+      user: "Mtumiaji",
+    },
+    live: {
+      title: "Utiririshaji Moja kwa Moja",
+      subtitle: "Nenda moja kwa moja na hadhira yako wakati halisi. Shiriki matukio, unganisha na mashabiki, na pata zawadi wakati wa utiririshaji wako.",
+      hdStreaming: "Utiririshaji HD",
+      hdStreamingDesc: "Tiririsha kwa ubora wa juu na kasi inayobadilika kwa uzoefu bora wa mtazamaji",
+      realTimeChat: "Mazungumzo ya Wakati Halisi",
+      realTimeChatDesc: "Ingiliana na watazamaji wako kupitia mazungumzo ya moja kwa moja na jibu maoni papo hapo",
+      liveGifts: "Zawadi za Moja kwa Moja",
+      liveGiftsDesc: "Pokea zawadi kutoka kwa watazamaji wakati wa utiririshaji wako na pata pesa wakati halisi",
+      phase2Feature: "Kipengele cha Awamu ya 2",
+      phase2Desc: "Utiririshaji wa moja kwa moja unatengenezwa sasa hivi na utapatikana katika sasisho kubwa lijalo. Subiri matangazo!",
+      startStream: "Anza Utiririshaji Moja kwa Moja",
+      viewStreams: "Tazama Utiririshaji wa Moja kwa Moja",
+    },
+    messages: {
+      title: "Ujumbe Moja kwa Moja",
+      subtitle: "Unganisha na mashabiki wako na waundaji wenzio kupitia ujumbe wa faragha. Jenga mahusiano na ushirikiano.",
+      privateChats: "Mazungumzo ya Faragha",
+      privateChatsDesc: "Tuma ujumbe moja kwa moja kwa watumiaji wengine kwa faragha kamili na usimbaji fiche",
+      notifications: "Arifa",
+      notificationsDesc: "Pata arifa papo hapo unapo pokea ujumbe mpya au majibu",
+      spamProtection: "Ulinzi dhidi ya Barua Taka",
+      spamProtectionDesc: "Vichujio vya hali ya juu kukuprotect kutoka kwa barua taka na ujumbe usiohitajika",
+      phase2Feature: "Kipengele cha Awamu ya 2",
+      phase2Desc: "Ujumbe moja kwa moja unatengenezwa sasa hivi na utapatikana katika sasisho kubwa lijalo. Utaweza kuzungumza na waundaji na mashabiki kwa usalama.",
+      sendMessage: "Tuma Ujumbe",
+      viewInbox: "Tazama Kikasha cha Ujumbe",
+    },
+  },
+  // Arabic
+  ar: {
+    nav: {
+      home: "الرئيسية",
+      upload: "رفع",
+      live: "مباشر",
+      messages: "الرسائل",
+      settings: "الإعدادات",
+      dashboard: "لوحة التحكم",
+      shop: "المتجر",
+      profile: "الملف الشخصي",
+      logout: "تسجيل خروج",
+    },
+    landing: {
+      tagline: "منصة المبدعين العالمية",
+      title: "FreeMind Vision",
+      subtitle: "أنشئ. شارك. اكسب.",
+      description: "انضم إلى المجتمع العالمي حيث يلتقي الإبداع بالفرصة. شارك مقاطع الفيديو الخاصة بك، تواصل مع الملايين، واحصل على أرباح من شغفك باستخدام YimiCoins.",
+      getStarted: "ابدأ مجانًا",
+      login: "تسجيل الدخول",
+      creatorEarnings: "60%",
+      countries: "دولة",
+      liveSupport: "الدعم 24/7",
+      setupFee: "رسوم الإعداد",
+      featuresTitle: "كل ما تحتاجه للنجاح",
+      featuresSubtitle: "مصمم للمبدعين، مصنوع للنجاح. جميع الأدوات التي تحتاجها لتنمية جمهورك وتحقيق الدخل من محتواك.",
+      uploadShare: "رفع ومشاركة",
+      uploadDesc: "قم برفع مقاطع فيديو قصيرة في ثوانٍ. شارك إبداعك مع جمهور عالمي على الفور.",
+      earnMoney: "اكسب أموالاً حقيقية",
+      earnDesc: "احتفظ بـ 60٪ من جميع الأرباح. احصل على أموال بالفرنك الأفريقي أو الدولار أو عملتك المفضلة عبر Mobile Money أو PayPal أو التحويل البنكي.",
+      globalReach: "الوصول العالمي",
+      globalDesc: "تواصل مع الجمهور في جميع أنحاء العالم. تساعدك الترجمة التلقائية على الوصول إلى كل ركن من أركان العالم.",
+    },
+    common: {
+      comingSoon: "قريبًا",
+      yimiCoins: "YimiCoins",
+      credits: "الأرصدة",
+      loading: "جار التحميل...",
+      error: "خطأ",
+      success: "نجاح",
+      cancel: "إلغاء",
+      save: "حفظ",
+      delete: "حذف",
+      edit: "تعديل",
+      share: "مشاركة",
+      like: "إعجاب",
+      comment: "تعليق",
+      send: "إرسال",
+      follow: "متابعة",
+      following: "متابَع",
+      unfollow: "إلغاء المتابعة",
+      followers: "المتابعون",
+    },
+    settings: {
+      title: "الإعدادات",
+      subtitle: "إدارة حسابك وتفضيلاتك",
+      creatorTools: "أدوات المبدع",
+      account: "الحساب",
+      preferences: "التفضيلات",
+      dashboardTitle: "لوحة تحكم المبدع",
+      dashboardDesc: "عرض أرباحك وإحصائياتك وأداء الفيديو",
+      shopTitle: "متجر الأرصدة",
+      shopDesc: "شراء YimiCoins لدعم المبدعين",
+      profileTitle: "الملف الشخصي",
+      profileDesc: "إدارة ملفك الشخصي ومعلوماتك الشخصية",
+      languageTitle: "اللغة",
+      languageDesc: "تغيير لغة التطبيق (Français, English, Wolof, إلخ)",
+      notificationsTitle: "الإشعارات",
+      notificationsDesc: "إدارة تفضيلات الإشعارات",
+      privacyTitle: "الخصوصية والأمان",
+      privacyDesc: "التحكم في إعدادات الخصوصية والأمان",
+      accountInfo: "معلومات الحساب",
+      accountInfoDesc: "تفاصيل حسابك في FreeMind Vision",
+      email: "البريد الإلكتروني",
+      accountType: "نوع الحساب",
+      balance: "رصيد YimiCoins",
+      totalEarnings: "إجمالي الأرباح",
+      creator: "مبدع",
+      user: "مستخدم",
+    },
+    live: {
+      title: "البث المباشر",
+      subtitle: "بث مباشر مع جمهورك في الوقت الفعلي. شارك اللحظات، تواصل مع المعجبين، واكسب الهدايا أثناء البث.",
+      hdStreaming: "بث عالي الدقة",
+      hdStreamingDesc: "بث بجودة عالية مع معدل نقل تكيفي لأفضل تجربة للمشاهدين",
+      realTimeChat: "دردشة في الوقت الفعلي",
+      realTimeChatDesc: "تفاعل مع المشاهدين من خلال الدردشة المباشرة والرد على التعليقات فورًا",
+      liveGifts: "هدايا مباشرة",
+      liveGiftsDesc: "تلقي هدايا من المشاهدين أثناء البث وكسب المال في الوقت الفعلي",
+      phase2Feature: "ميزة المرحلة 2",
+      phase2Desc: "البث المباشر قيد التطوير حاليًا وسيكون متاحًا في التحديث الرئيسي التالي. ترقب الإعلانات!",
+      startStream: "بدء البث المباشر",
+      viewStreams: "عرض البث المباشر",
+    },
+    messages: {
+      title: "الرسائل المباشرة",
+      subtitle: "تواصل مع معجبيك وزملائك المبدعين من خلال الرسائل الخاصة. بناء العلاقات والتعاون.",
+      privateChats: "الدردشات الخاصة",
+      privateChatsDesc: "إرسال رسائل مباشرة للمستخدمين الآخرين مع خصوصية وتشفير كاملين",
+      notifications: "الإشعارات",
+      notificationsDesc: "احصل على إشعارات فورية عند تلقي رسائل جديدة أو ردود",
+      spamProtection: "الحماية من الرسائل غير المرغوب فيها",
+      spamProtectionDesc: "مرشحات متقدمة لحمايتك من الرسائل غير المرغوب فيها والرسائل غير المرغوب فيها",
+      phase2Feature: "ميزة المرحلة 2",
+      phase2Desc: "الرسائل المباشرة قيد التطوير حاليًا وستكون متاحة في التحديث الرئيسي التالي. ستتمكن من الدردشة مع المبدعين والمعجبين بأمان.",
+      sendMessage: "إرسال رسالة",
+      viewInbox: "عرض صندوق الوارد",
+    },
+  },
+  // Portuguese (Angola, Mozambique, Portugal, Brazil)
+  pt: {
+    nav: {
+      home: "Início",
+      upload: "Carregar",
+      live: "Ao Vivo",
+      messages: "Mensagens",
+      settings: "Configurações",
+      dashboard: "Painel",
+      shop: "Loja",
+      profile: "Perfil",
+      logout: "Sair",
+    },
+    landing: {
+      tagline: "Plataforma Global de Criadores",
+      title: "FreeMind Vision",
+      subtitle: "Crie. Compartilhe. Ganhe.",
+      description: "Junte-se à comunidade global onde a criatividade encontra oportunidade. Compartilhe seus vídeos, conecte-se com milhões e monetize sua paixão com YimiCoins.",
+      getStarted: "Começar Grátis",
+      login: "Entrar",
+      creatorEarnings: "60%",
+      countries: "Países",
+      liveSupport: "Suporte 24/7",
+      setupFee: "Taxa de Configuração",
+      featuresTitle: "Tudo o Que Você Precisa para Ter Sucesso",
+      featuresSubtitle: "Construído para criadores, projetado para o sucesso. Todas as ferramentas que você precisa para aumentar seu público e monetizar seu conteúdo.",
+      uploadShare: "Carregar e Compartilhar",
+      uploadDesc: "Carregue vídeos curtos em segundos. Compartilhe sua criatividade com um público global instantaneamente.",
+      earnMoney: "Ganhe Dinheiro Real",
+      earnDesc: "Mantenha 60% de todos os ganhos. Receba em FCFA, USD ou sua moeda preferida através de Mobile Money, PayPal ou transferência bancária.",
+      globalReach: "Alcance Global",
+      globalDesc: "Conecte-se com públicos em todo o mundo. A tradução automática ajuda você a alcançar todos os cantos do globo.",
+    },
+    common: {
+      comingSoon: "Em Breve",
+      yimiCoins: "YimiCoins",
+      credits: "Créditos",
+      loading: "Carregando...",
+      error: "Erro",
+      success: "Sucesso",
+      cancel: "Cancelar",
+      save: "Salvar",
+      delete: "Excluir",
+      edit: "Editar",
+      share: "Compartilhar",
+      like: "Curtir",
+      comment: "Comentar",
+      send: "Enviar",
+      follow: "Seguir",
+      following: "Seguindo",
+      unfollow: "Deixar de Seguir",
+      followers: "Seguidores",
+    },
+    settings: {
+      title: "Configurações",
+      subtitle: "Gerencie sua conta e preferências",
+      creatorTools: "Ferramentas de Criador",
+      account: "Conta",
+      preferences: "Preferências",
+      dashboardTitle: "Painel do Criador",
+      dashboardDesc: "Veja seus ganhos, estatísticas e desempenho de vídeos",
+      shopTitle: "Loja de Créditos",
+      shopDesc: "Compre YimiCoins para apoiar criadores",
+      profileTitle: "Perfil",
+      profileDesc: "Gerencie seu perfil e informações pessoais",
+      languageTitle: "Idioma",
+      languageDesc: "Alterar idioma do aplicativo (Français, English, Wolof, etc.)",
+      notificationsTitle: "Notificações",
+      notificationsDesc: "Gerencie preferências de notificação",
+      privacyTitle: "Privacidade e Segurança",
+      privacyDesc: "Controle suas configurações de privacidade e segurança",
+      accountInfo: "Informações da Conta",
+      accountInfoDesc: "Detalhes da sua conta FreeMind Vision",
+      email: "Email",
+      accountType: "Tipo de Conta",
+      balance: "Saldo de YimiCoins",
+      totalEarnings: "Ganhos Totais",
+      creator: "Criador",
+      user: "Usuário",
+    },
+    live: {
+      title: "Transmissão Ao Vivo",
+      subtitle: "Transmita ao vivo com seu público em tempo real. Compartilhe momentos, conecte-se com fãs e ganhe presentes durante suas transmissões.",
+      hdStreaming: "Transmissão HD",
+      hdStreamingDesc: "Transmita em alta qualidade com taxa de bits adaptativa para a melhor experiência do espectador",
+      realTimeChat: "Chat em Tempo Real",
+      realTimeChatDesc: "Interaja com seus espectadores através do chat ao vivo e responda aos comentários instantaneamente",
+      liveGifts: "Presentes Ao Vivo",
+      liveGiftsDesc: "Receba presentes dos espectadores durante sua transmissão e ganhe dinheiro em tempo real",
+      phase2Feature: "Recurso da Fase 2",
+      phase2Desc: "A transmissão ao vivo está atualmente em desenvolvimento e estará disponível na próxima atualização importante. Fique atento aos anúncios!",
+      startStream: "Iniciar Transmissão Ao Vivo",
+      viewStreams: "Ver Transmissões Ao Vivo",
+    },
+    messages: {
+      title: "Mensagens Diretas",
+      subtitle: "Conecte-se com seus fãs e outros criadores através de mensagens privadas. Construa relacionamentos e colabore.",
+      privateChats: "Chats Privados",
+      privateChatsDesc: "Envie mensagens diretas para outros usuários com total privacidade e criptografia",
+      notifications: "Notificações",
+      notificationsDesc: "Receba notificações instantâneas quando você receber novas mensagens ou respostas",
+      spamProtection: "Proteção contra Spam",
+      spamProtectionDesc: "Filtros avançados para protegê-lo de spam e mensagens indesejadas",
+      phase2Feature: "Recurso da Fase 2",
+      phase2Desc: "As mensagens diretas estão atualmente em desenvolvimento e estarão disponíveis na próxima atualização importante. Você poderá conversar com criadores e fãs com segurança.",
+      sendMessage: "Enviar Mensagem",
+      viewInbox: "Ver Caixa de Entrada",
+    },
+  },
+};
