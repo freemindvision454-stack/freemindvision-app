@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Upload as UploadIcon, DollarSign, User, Menu, X, Coins, LayoutDashboard } from "lucide-react";
+import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,8 +22,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navItems = [
     { href: "/", label: "Home", icon: Home, testId: "nav-home" },
     { href: "/upload", label: "Upload", icon: UploadIcon, testId: "nav-upload" },
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
-    { href: "/shop", label: "Shop", icon: Coins, testId: "nav-shop" },
+    { href: "/live", label: "Live", icon: Video, testId: "nav-live" },
+    { href: "/messages", label: "Messages", icon: MessageCircle, testId: "nav-messages" },
   ];
 
   return (
@@ -33,8 +33,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/">
-              <a className="flex items-center gap-3 hover-elevate p-2 rounded-lg transition-all" data-testid="link-home">
+            <Link href="/" data-testid="link-home">
+              <div className="flex items-center gap-3 hover-elevate p-2 rounded-lg transition-all cursor-pointer">
                 <img 
                   src={logoUrl} 
                   alt="FreeMind Vision Logo" 
@@ -43,7 +43,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <div className="text-2xl font-poppins font-bold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
                   FreeMind
                 </div>
-              </a>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
@@ -53,18 +53,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 const isActive = location === item.href;
 
                 return (
-                  <Link key={item.href} href={item.href}>
-                    <a
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover-elevate ${
+                  <Link key={item.href} href={item.href} data-testid={item.testId}>
+                    <div
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover-elevate cursor-pointer ${
                         isActive
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
-                      data-testid={item.testId}
                     >
                       <Icon className="w-5 h-5" />
                       <span>{item.label}</span>
-                    </a>
+                    </div>
                   </Link>
                 );
               })}
@@ -79,15 +78,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </span>
               </div>
 
-              <Link href={`/profile/${user?.id}`}>
-                <a className="hover-elevate rounded-full" data-testid="button-profile">
+              <Link href="/settings" data-testid="link-settings">
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </Link>
+
+              <Link href={`/profile/${user?.id}`} data-testid="button-profile">
+                <div className="hover-elevate rounded-full cursor-pointer">
                   <Avatar>
                     <AvatarImage src={user?.profileImageUrl || undefined} />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {displayName[0].toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                </a>
+                </div>
               </Link>
 
               <Button
@@ -119,19 +124,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 const isActive = location === item.href;
 
                 return (
-                  <Link key={item.href} href={item.href}>
-                    <a
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all hover-elevate ${
+                  <Link key={item.href} href={item.href} data-testid={`${item.testId}-mobile`}>
+                    <div
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all hover-elevate cursor-pointer ${
                         isActive
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                       onClick={() => setMobileMenuOpen(false)}
-                      data-testid={`${item.testId}-mobile`}
                     >
                       <Icon className="w-5 h-5" />
                       <span>{item.label}</span>
-                    </a>
+                    </div>
                   </Link>
                 );
               })}
@@ -179,18 +183,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
             const isActive = location === item.href;
 
             return (
-              <Link key={item.href} href={item.href}>
-                <a
-                  className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all hover-elevate ${
+              <Link key={item.href} href={item.href} data-testid={`${item.testId}-bottom`}>
+                <div
+                  className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all hover-elevate cursor-pointer ${
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground"
                   }`}
-                  data-testid={`${item.testId}-bottom`}
                 >
                   <Icon className="w-6 h-6" />
                   <span className="text-xs font-medium">{item.label}</span>
-                </a>
+                </div>
               </Link>
             );
           })}

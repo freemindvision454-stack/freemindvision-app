@@ -14,6 +14,9 @@ import CreditShop from "@/pages/CreditShop";
 import Checkout from "@/pages/Checkout";
 import MobileMoneyPayment from "@/pages/MobileMoneyPayment";
 import BankTransferPayment from "@/pages/BankTransferPayment";
+import Live from "@/pages/Live";
+import Messages from "@/pages/Messages";
+import Settings from "@/pages/Settings";
 import AppLayout from "@/components/AppLayout";
 
 function Router() {
@@ -39,6 +42,21 @@ function Router() {
       <Route path="/upload">
         <AppLayout>
           <Upload />
+        </AppLayout>
+      </Route>
+      <Route path="/live">
+        <AppLayout>
+          <Live />
+        </AppLayout>
+      </Route>
+      <Route path="/messages">
+        <AppLayout>
+          <Messages />
+        </AppLayout>
+      </Route>
+      <Route path="/settings">
+        <AppLayout>
+          <Settings />
         </AppLayout>
       </Route>
       <Route path="/dashboard">
