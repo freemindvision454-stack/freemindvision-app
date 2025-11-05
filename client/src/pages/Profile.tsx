@@ -1,11 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, Heart, Video as VideoIcon, Gift, MapPin } from "lucide-react";
+import { Eye, Heart, Video as VideoIcon, Gift, UserPlus, UserMinus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { User, Video } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface ProfileData {
   user: User;
@@ -20,12 +22,77 @@ interface ProfileData {
 export default function Profile() {
   const [, params] = useRoute("/profile/:userId");
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
   const userId = params?.userId;
 
   const { data: profile, isLoading } = useQuery<ProfileData>({
     queryKey: ["/api/profile", userId],
     enabled: !!userId,
   });
+
+  const { data: followStats } = useQuery<{ followerCount: number; followingCount: number }>({
+    queryKey: ["/api/users", userId, "follow-stats"],
+    enabled: !!userId,
+  });
+
+  const { data: followStatus } = useQuery<{ isFollowing: boolean }>({
+    queryKey: ["/api/users", userId, "is-following"],
+    enabled: !!userId && !!currentUser && currentUser.id !== userId,
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error("No user ID");
+      return await apiRequest("POST", `/api/users/${userId}/follow`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "is-following"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "follow-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos/following"] });
+      toast({
+        title: "Success!",
+        description: "You are now following this creator",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to follow user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) throw new Error("No user ID");
+      return await apiRequest("DELETE", `/api/users/${userId}/follow`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "is-following"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userId, "follow-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos/following"] });
+      toast({
+        title: "Success",
+        description: "You unfollowed this creator",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to unfollow user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFollowToggle = () => {
+    if (followStatus?.isFollowing) {
+      unfollowMutation.mutate();
+    } else {
+      followMutation.mutate();
+    }
+  };
 
   if (isLoading) {
     return (
@@ -85,34 +152,57 @@ export default function Profile() {
               )}
 
               <div className="flex flex-wrap gap-6 justify-center md:justify-start text-sm mb-4">
-                <div className="text-center">
+                <div className="text-center" data-testid="stat-videos">
                   <div className="text-2xl font-poppins font-bold">{profile.videos.length}</div>
                   <div className="text-muted-foreground">Videos</div>
                 </div>
-                <div className="text-center">
+                <div className="text-center" data-testid="stat-views">
                   <div className="text-2xl font-poppins font-bold">
                     {profile.stats.totalViews.toLocaleString()}
                   </div>
                   <div className="text-muted-foreground">Views</div>
                 </div>
-                <div className="text-center">
+                <div className="text-center" data-testid="stat-likes">
                   <div className="text-2xl font-poppins font-bold">
                     {profile.stats.totalLikes.toLocaleString()}
                   </div>
                   <div className="text-muted-foreground">Likes</div>
                 </div>
-                <div className="text-center">
+                <div className="text-center" data-testid="stat-followers">
                   <div className="text-2xl font-poppins font-bold">
-                    {profile.stats.followers || 0}
+                    {followStats?.followerCount?.toLocaleString() || 0}
                   </div>
                   <div className="text-muted-foreground">Followers</div>
                 </div>
+                <div className="text-center" data-testid="stat-following">
+                  <div className="text-2xl font-poppins font-bold">
+                    {followStats?.followingCount?.toLocaleString() || 0}
+                  </div>
+                  <div className="text-muted-foreground">Following</div>
+                </div>
               </div>
 
-              {!isOwnProfile && (
+              {!isOwnProfile && currentUser && (
                 <div className="flex gap-3">
-                  <Button size="lg" className="font-poppins font-semibold" data-testid="button-follow">
-                    Follow
+                  <Button 
+                    size="lg" 
+                    variant={followStatus?.isFollowing ? "outline" : "default"}
+                    className="font-poppins font-semibold" 
+                    data-testid="button-follow"
+                    onClick={handleFollowToggle}
+                    disabled={followMutation.isPending || unfollowMutation.isPending}
+                  >
+                    {followStatus?.isFollowing ? (
+                      <>
+                        <UserMinus className="w-5 h-5 mr-2" />
+                        Unfollow
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-5 h-5 mr-2" />
+                        Follow
+                      </>
+                    )}
                   </Button>
                   <Button size="lg" variant="outline" className="font-poppins font-semibold" data-testid="button-send-gift">
                     <Gift className="w-5 h-5 mr-2" />

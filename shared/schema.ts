@@ -95,6 +95,19 @@ export const likes = pgTable("likes", {
 
 export type Like = typeof likes.$inferSelect;
 
+// Follows table (follower/following relationships)
+export const follows = pgTable("follows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  followerId: varchar("follower_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  followingId: varchar("following_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("follows_follower_idx").on(table.followerId),
+  index("follows_following_idx").on(table.followingId),
+]);
+
+export type Follow = typeof follows.$inferSelect;
+
 // Gift types (predefined virtual gifts)
 export const giftTypes = pgTable("gift_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -166,6 +179,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   sentGifts: many(gifts, { relationName: "sender" }),
   receivedGifts: many(gifts, { relationName: "recipient" }),
   transactions: many(transactions),
+  following: many(follows, { relationName: "follower" }),
+  followers: many(follows, { relationName: "following" }),
 }));
 
 export const videosRelations = relations(videos, ({ one, many }) => ({
@@ -225,5 +240,18 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   user: one(users, {
     fields: [transactions.userId],
     references: [users.id],
+  }),
+}));
+
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(users, {
+    fields: [follows.followerId],
+    references: [users.id],
+    relationName: "follower",
+  }),
+  following: one(users, {
+    fields: [follows.followingId],
+    references: [users.id],
+    relationName: "following",
   }),
 }));

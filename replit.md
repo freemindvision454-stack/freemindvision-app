@@ -218,6 +218,23 @@ Required secrets (managed by Replit):
 
 ## Recent Changes
 
+**2025-11-05**: Phase 2.5 - Social Features
+- **Follow/Followers System**: Complete social network functionality
+  - Follow/unfollow users with dynamic button states
+  - Follower and following counts displayed on profiles
+  - "Following" feed tab to see videos from followed creators only
+  - isFollowing status checks to show correct button state
+  - Real-time updates after follow/unfollow actions
+- **Enhanced Profile Page**:
+  - Follow/Unfollow button with icon indicators
+  - Following count alongside followers count
+  - data-testid attributes for all interactive elements
+- **Enhanced Feed Page**:
+  - "For You" and "Following" tabs for personalized content
+  - Following feed fetches only videos from followed creators
+  - Empty states for when no creators are followed
+- **Database**: New follows table with follower/following relationships
+
 **2025-11-05**: Phase 2 - Real Payment Integration
 - **Stripe Integration**: Full credit card payment processing with Stripe
   - Payment intent creation for secure transactions (API version 2024-06-20)

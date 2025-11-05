@@ -185,6 +185,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== FOLLOW ROUTES =====
+
+  // Follow a user
+  app.post("/api/users/:userId/follow", isAuthenticated, async (req: any, res) => {
+    try {
+      const followerId = req.user.claims.sub;
+      const followingId = req.params.userId;
+
+      if (followerId === followingId) {
+        return res.status(400).json({ message: "Cannot follow yourself" });
+      }
+
+      await storage.followUser(followerId, followingId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error following user:", error);
+      res.status(500).json({ message: "Failed to follow user" });
+    }
+  });
+
+  // Unfollow a user
+  app.delete("/api/users/:userId/follow", isAuthenticated, async (req: any, res) => {
+    try {
+      const followerId = req.user.claims.sub;
+      const followingId = req.params.userId;
+
+      await storage.unfollowUser(followerId, followingId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+      res.status(500).json({ message: "Failed to unfollow user" });
+    }
+  });
+
+  // Check if following
+  app.get("/api/users/:userId/is-following", isAuthenticated, async (req: any, res) => {
+    try {
+      const followerId = req.user.claims.sub;
+      const followingId = req.params.userId;
+
+      const isFollowing = await storage.isFollowing(followerId, followingId);
+      res.json({ isFollowing });
+    } catch (error) {
+      console.error("Error checking follow status:", error);
+      res.status(500).json({ message: "Failed to check follow status" });
+    }
+  });
+
+  // Get follower/following counts
+  app.get("/api/users/:userId/follow-stats", async (req, res) => {
+    try {
+      const userId = req.params.userId;
+
+      const [followerCount, followingCount] = await Promise.all([
+        storage.getFollowerCount(userId),
+        storage.getFollowingCount(userId),
+      ]);
+
+      res.json({ followerCount, followingCount });
+    } catch (error) {
+      console.error("Error getting follow stats:", error);
+      res.status(500).json({ message: "Failed to get follow stats" });
+    }
+  });
+
+  // Get following feed (videos from followed creators)
+  app.get("/api/videos/following", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const videos = await storage.getFollowingVideos(userId);
+      res.json(videos);
+    } catch (error) {
+      console.error("Error getting following videos:", error);
+      res.status(500).json({ message: "Failed to get following videos" });
+    }
+  });
+
   // ===== COMMENT ROUTES =====
 
   // Create comment

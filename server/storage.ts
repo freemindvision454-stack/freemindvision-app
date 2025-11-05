@@ -4,6 +4,7 @@ import {
   videos,
   comments,
   likes,
+  follows,
   giftTypes,
   gifts,
   creditPackages,
@@ -15,6 +16,7 @@ import {
   type Comment,
   type InsertComment,
   type Like,
+  type Follow,
   type Gift,
   type InsertGift,
   type GiftType,
@@ -23,7 +25,7 @@ import {
   type InsertTransaction,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (Replit Auth required)
@@ -46,6 +48,14 @@ export interface IStorage {
   likeVideo(userId: string, videoId: string): Promise<Like>;
   unlikeVideo(userId: string, videoId: string): Promise<void>;
   isVideoLiked(userId: string, videoId: string): Promise<boolean>;
+
+  // Follow operations
+  followUser(followerId: string, followingId: string): Promise<Follow>;
+  unfollowUser(followerId: string, followingId: string): Promise<void>;
+  isFollowing(followerId: string, followingId: string): Promise<boolean>;
+  getFollowerCount(userId: string): Promise<number>;
+  getFollowingCount(userId: string): Promise<number>;
+  getFollowingVideos(userId: string, limit?: number): Promise<Video[]>;
 
   // Gift operations
   getGiftTypes(): Promise<GiftType[]>;
@@ -191,6 +201,84 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     return result.length > 0;
+  }
+
+  // Follow operations
+  async followUser(followerId: string, followingId: string): Promise<Follow> {
+    // Check if already following or trying to follow self
+    if (followerId === followingId) {
+      throw new Error("Cannot follow yourself");
+    }
+
+    const existing = await db
+      .select()
+      .from(follows)
+      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    // Create new follow (database unique constraint prevents duplicates)
+    const [follow] = await db.insert(follows).values({ followerId, followingId }).returning();
+    return follow;
+  }
+
+  async unfollowUser(followerId: string, followingId: string): Promise<void> {
+    await db
+      .delete(follows)
+      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+  }
+
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(follows)
+      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+      .limit(1);
+
+    return result.length > 0;
+  }
+
+  async getFollowerCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(follows)
+      .where(eq(follows.followingId, userId));
+
+    return result[0]?.count || 0;
+  }
+
+  async getFollowingCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+
+    return result[0]?.count || 0;
+  }
+
+  async getFollowingVideos(userId: string, limit: number = 50): Promise<Video[]> {
+    // Get IDs of users that the current user is following
+    const followingUsers = await db
+      .select({ id: follows.followingId })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+
+    if (followingUsers.length === 0) {
+      return [];
+    }
+
+    const followingIds = followingUsers.map(f => f.id);
+
+    // Get videos from followed creators
+    return await db
+      .select()
+      .from(videos)
+      .where(sql`${videos.creatorId} = ANY(${followingIds})`)
+      .orderBy(desc(videos.createdAt))
+      .limit(limit);
   }
 
   // Gift operations

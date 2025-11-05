@@ -4,8 +4,10 @@ import { Heart, MessageCircle, Share2, Gift, Play, Pause, Volume2, VolumeX } fro
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Video, User } from "@shared/schema";
 import { GiftModal } from "@/components/GiftModal";
+import { useAuth } from "@/hooks/useAuth";
 
 interface VideoWithCreator extends Video {
   creator: User;
@@ -14,9 +16,21 @@ interface VideoWithCreator extends Video {
 }
 
 export default function Feed() {
-  const { data: videos, isLoading } = useQuery<VideoWithCreator[]>({
+  const { user: currentUser } = useAuth();
+  const [feedType, setFeedType] = useState<"for-you" | "following">("for-you");
+
+  const { data: forYouVideos, isLoading: forYouLoading } = useQuery<VideoWithCreator[]>({
     queryKey: ["/api/videos"],
+    enabled: feedType === "for-you",
   });
+
+  const { data: followingVideos, isLoading: followingLoading } = useQuery<VideoWithCreator[]>({
+    queryKey: ["/api/videos/following"],
+    enabled: feedType === "following" && !!currentUser,
+  });
+
+  const videos = feedType === "for-you" ? forYouVideos : followingVideos;
+  const isLoading = feedType === "for-you" ? forYouLoading : followingLoading;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -86,16 +100,38 @@ export default function Feed() {
 
   if (!videos || videos.length === 0) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <Card className="p-12 text-center max-w-md">
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Play className="w-10 h-10 text-primary" />
+      <div className="h-screen bg-background flex flex-col">
+        {currentUser && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b">
+            <div className="flex items-center justify-center py-2">
+              <Tabs value={feedType} onValueChange={(v) => setFeedType(v as "for-you" | "following")} className="w-auto">
+                <TabsList className="bg-background border">
+                  <TabsTrigger value="for-you" data-testid="tab-for-you" className="font-poppins font-semibold">
+                    For You
+                  </TabsTrigger>
+                  <TabsTrigger value="following" data-testid="tab-following" className="font-poppins font-semibold">
+                    Following
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
-          <h2 className="text-2xl font-poppins font-bold mb-2">No Videos Yet</h2>
-          <p className="text-muted-foreground mb-6">
-            Be the first to share your creativity! Upload a video to get started.
-          </p>
-        </Card>
+        )}
+        <div className={`flex-1 flex items-center justify-center ${currentUser ? 'mt-16' : ''}`}>
+          <Card className="p-12 text-center max-w-md">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Play className="w-10 h-10 text-primary" />
+            </div>
+            <h2 className="text-2xl font-poppins font-bold mb-2">
+              {feedType === "following" ? "No Videos from Followed Creators" : "No Videos Yet"}
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              {feedType === "following" 
+                ? "Follow some creators to see their videos here!" 
+                : "Be the first to share your creativity! Upload a video to get started."}
+            </p>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -103,16 +139,35 @@ export default function Feed() {
   const currentVideo = videos[currentIndex];
 
   return (
-    <div 
-      ref={containerRef}
-      className="h-screen overflow-y-scroll snap-y snap-mandatory bg-background scroll-smooth"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    >
-      <style>{`
-        div::-webkit-scrollbar { display: none; }
-      `}</style>
+    <>
+      {/* Feed Type Tabs */}
+      {currentUser && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b">
+          <div className="flex items-center justify-center py-2">
+            <Tabs value={feedType} onValueChange={(v) => setFeedType(v as "for-you" | "following")} className="w-auto">
+              <TabsList className="bg-background border">
+                <TabsTrigger value="for-you" data-testid="tab-for-you" className="font-poppins font-semibold">
+                  For You
+                </TabsTrigger>
+                <TabsTrigger value="following" data-testid="tab-following" className="font-poppins font-semibold">
+                  Following
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+      )}
 
-      {videos.map((video, index) => (
+      <div 
+        ref={containerRef}
+        className={`h-screen overflow-y-scroll snap-y snap-mandatory bg-background scroll-smooth ${currentUser ? 'pt-14' : ''}`}
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        <style>{`
+          div::-webkit-scrollbar { display: none; }
+        `}</style>
+
+        {videos.map((video, index) => (
         <div
           key={video.id}
           className="h-screen snap-start snap-always relative flex items-center justify-center bg-black"
@@ -268,6 +323,7 @@ export default function Feed() {
           )}
         </div>
       ))}
+      </div>
 
       {/* Gift Modal */}
       {showGiftModal && currentVideo && (
@@ -278,6 +334,6 @@ export default function Feed() {
           videoId={currentVideo.id}
         />
       )}
-    </div>
+    </>
   );
 }
