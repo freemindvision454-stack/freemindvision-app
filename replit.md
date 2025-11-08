@@ -78,25 +78,57 @@ Comprehensive API endpoints are provided for authentication, video management, c
 - ✅ Enhanced diagnostic logging for production mode debugging
 - ✅ Health checks now include environment, uptime, and port information
 
-**Known Issue: `.replit` File Port Configuration**
+**CRITICAL: `.replit` File Must Be Fixed for Deployment**
 
-The `.replit` file contains **8 port configurations** which may cause deployment issues on Replit:
+The `.replit` file currently has **8 port configurations** which **WILL CAUSE** deployment failures on Replit Autoscale/Reserved VM.
 
-- **Current Ports**: 5000→80 (required for deployment), plus 7 auto-generated ports
-- **Replit Requirement**: Only **ONE external port** should be exposed for Autoscale/Reserved VM deployments
-- **Impact**: If deployment fails with "failed to initialize port configuration" error, contact Replit Support
+**📋 SOLUTION: Modify `.replit` File (2 Options)**
 
-**If Deployment Fails Due to Ports:**
-1. Contact Replit Support at https://replit.com/support
-2. Request: "Please clean my `.replit` file to keep only port 5000→80 for deployment"
-3. Expected result: `.replit` should have only:
+**Option 1 - Quick Fix (Recommended): Modify `.replit` Yourself**
+
+1. Open `.replit` file in the editor
+2. Find the `[[ports]]` section (currently has 8 port blocks)
+3. **DELETE all port blocks EXCEPT the first one** (lines 13-47)
+4. Keep only:
    ```
    [[ports]]
    localPort = 5000
    externalPort = 80
    ```
+5. Add this section right after `[deployment]`:
+   ```
+   [deployment.env]
+   NODE_ENV = "production"
+   ```
+6. Save the file
+7. Try deploying again
 
-**Note:** The `.replit` file is system-protected and accumulates ports automatically during development. This is a platform limitation that requires support intervention to resolve.
+**Option 2 - Contact Support:**
+
+If you can't edit `.replit` yourself:
+1. Contact Replit Support: https://replit.com/support
+2. Message: "My `.replit` has 8 ports, I need only port 5000→80 for deployment. Please clean the file."
+3. Wait 24-48h for response
+
+**Why This Happens:**
+- Replit auto-generates ports during development
+- Autoscale/Reserved VM require EXACTLY ONE external port
+- Multiple ports cause "failed to initialize port configuration" error
+
+**What Should Be in `.replit`:**
+```toml
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start"]
+
+[deployment.env]
+NODE_ENV = "production"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+```
 
 ### Production Readiness Verification
 The application code is production-ready:
