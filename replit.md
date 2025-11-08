@@ -9,6 +9,9 @@ Key capabilities include:
 - A TikTok-style vertical video feed, content upload, and basic social interactions (likes, comments).
 - A unique monetization system featuring virtual currency (YimiCoins), virtual gifts, and a 60/40 revenue split model favoring creators.
 - A comprehensive creator dashboard for tracking earnings and video performance.
+- **Advanced Analytics Dashboard**: Multi-metric KPI tracking, engagement rate calculations, and interactive charts for creator insights.
+- **Badge & Achievement System**: 19 predefined badges across 4 tiers (Bronze, Silver, Gold, Platinum) with auto-award functionality.
+- **Referral Program**: Unique referral codes, 100 YimiCoins bonus rewards, and comprehensive tracking system.
 
 ## User Preferences
 
@@ -49,9 +52,28 @@ The platform features a modern, vibrant, and responsive design, heavily inspired
   - **Stripe Integration**: Full payment processing with webhook support for automatic share allocation upon successful payment
   - **Database Schema**: Dedicated tables for shares, share transactions, and historical price tracking
 - **Search Interface**: TikTok-style expandable search bar in header that transitions from icon to full search input on click, with mobile-optimized version.
+- **Advanced Analytics System**: Enhanced creator dashboard featuring:
+  - **6 KPI Cards**: Total views, likes, engagement rate, average views per video, comments, and earnings
+  - **Interactive Charts**: Area chart for combined metrics evolution, detailed line charts for views and engagement tracking
+  - **Top Videos Table**: Performance rankings with engagement rate calculations
+  - **Real-time Metrics**: Live updates of creator performance statistics
+- **Badge & Achievement System**: Gamification layer to motivate creators with:
+  - **19 Predefined Badges**: Across 5 categories (views, likes, followers, videos, earnings)
+  - **4 Achievement Tiers**: Bronze, Silver, Gold, and Platinum milestones
+  - **Auto-Award Logic**: Automatic badge distribution after video uploads via `checkAndAwardBadges()`
+  - **Profile Integration**: Visual badge display on user profiles with earned/locked states
+  - **Progress Tracking**: Shows next badges to unlock with requirements
+- **Referral Program**: Viral growth system with financial incentives:
+  - **Unique Codes**: Auto-generated 9-character codes (format: USR + 6 alphanumeric)
+  - **Bonus Rewards**: 100 YimiCoins awarded to referrer upon successful referral
+  - **Anti-Fraud**: Prevents self-referrals and duplicate code usage
+  - **Stats Dashboard**: Total referrals, bonus earned, pending referrals tracking
+  - **Share Functionality**: Copy code/URL buttons and native Web Share API integration
+  - **Referral History**: Complete audit trail of all successful referrals
+  - **Notification System**: Automatic notifications to referrers when bonuses are awarded
 
 ### Core System Design
-- **Database**: **PostgreSQL** (Neon) is used for data persistence, managed by **Drizzle ORM**. The schema includes tables for users, videos, comments, likes, gift types, gifts, credit packages, transactions, shares, share transactions, share price history, and sessions.
+- **Database**: **PostgreSQL** (Neon) is used for data persistence, managed by **Drizzle ORM**. The schema includes tables for users, videos, comments, likes, gift types, gifts, credit packages, transactions, shares, share transactions, share price history, notifications, badge types, user badges, referrals, and sessions.
 - **Revenue Model**: Creators receive 60% of the value of gifts received (converted to USD), with the platform retaining 40%.
 - **Equity Model**: Platform shares are sold at $108 each with a total platform valuation of $1,080,000 (10,000 shares). Share price history is tracked for investor transparency.
 - **Project Structure**: Organized into `client/` (React frontend), `server/` (Express backend), and `shared/` (shared types and Drizzle schema).
@@ -62,9 +84,12 @@ Comprehensive API endpoints are provided for:
 - **Video Management**: Upload, fetch, delete videos with stats
 - **Social Interactions**: Comments, likes, follows, messages
 - **Monetization**: Gift transactions, credit purchases, earnings tracking
-- **Analytics**: Creator dashboard statistics, video performance
+- **Analytics**: Creator dashboard statistics, video performance, engagement metrics
 - **Share System**: Current share price, portfolio holdings, transaction history, purchase intent creation, Stripe webhooks
 - **User Profiles**: Profile retrieval and updates
+- **Notifications**: Real-time notifications, read/unread status, notification count
+- **Badges**: Badge types listing, user badges retrieval, automatic badge checking
+- **Referrals**: Referral code generation, stats tracking, code application, referral history
 
 ## External Dependencies
 
