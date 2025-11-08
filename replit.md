@@ -60,24 +60,17 @@ Comprehensive API endpoints are provided for authentication, video management, c
 
 ### Important Deployment Notes
 
-**Autoscale Compatibility Issue:**
-The application currently cannot be deployed on Replit Autoscale due to a platform-level configuration constraint:
+**CRITICAL DEPLOYMENT BLOCKER:**
+The application **CANNOT be deployed on ANY Replit deployment type** (Autoscale OR Reserved VM) due to a platform-level configuration constraint:
 
 - **Problem**: The `.replit` file automatically accumulates multiple port configurations (8+ ports) as Replit auto-detects open ports during development.
-- **Autoscale Requirement**: Only ONE external port can be exposed for Autoscale deployments.
+- **Replit Requirement**: **ALL deployment types** (Autoscale AND Reserved VM) require **ONLY ONE external port** to be exposed.
 - **Current Ports**: 5000→80 (required), plus 7 additional auto-generated ports (5001, 5002, 33037, 36335, 37875, 39005, 41201).
-- **Blocker**: The `.replit` file is system-protected and cannot be edited programmatically or manually to remove extra ports.
+- **Blocker**: The `.replit` file is **system-protected** and cannot be edited programmatically or manually to remove extra ports.
+- **Impact**: Every deployment attempt fails after 2m15s with "failed to initialize" error.
 
-**Solution: Use Reserved VM**
-Reserved VM deployments are **recommended** for FreeMind Vision because:
-- ✅ Supports multiple port configurations (no `.replit` constraint)
-- ✅ Dedicated resources (better for video streaming platform)
-- ✅ Always-on (no scale-to-zero, ensuring 24/7 availability)
-- ✅ Guaranteed deployment success
-- ✅ Superior performance for media-heavy applications
-
-**Alternative: Contact Replit Support**
-To enable Autoscale in the future, contact Replit Support to clean the `.replit` file, keeping only:
+**ONLY Solution: Contact Replit Support**
+To enable ANY deployment (Autoscale or Reserved VM), you MUST contact Replit Support to clean the `.replit` file, keeping only:
 ```
 [[ports]]
 localPort = 5000
