@@ -20,6 +20,7 @@ import Messages from "@/pages/Messages";
 import Settings from "@/pages/Settings";
 import Search from "@/pages/Search";
 import Analytics from "@/pages/Analytics";
+import Shares from "@/pages/Shares";
 import AppLayout from "@/components/AppLayout";
 
 function Router() {
@@ -110,6 +111,11 @@ function Router() {
       <Route path="/payment/bank_transfer">
         <AppLayout>
           <BankTransferPayment />
+        </AppLayout>
+      </Route>
+      <Route path="/shares">
+        <AppLayout>
+          <Shares />
         </AppLayout>
       </Route>
       <Route component={NotFound} />
