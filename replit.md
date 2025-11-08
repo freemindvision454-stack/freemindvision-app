@@ -42,14 +42,29 @@ The platform features a modern, vibrant, and responsive design, heavily inspired
 - **Internationalization (i18n)**: Supports 7 languages (French, English, Wolof, Bambara, Swahili, Arabic, Portuguese) using a React Context-based system with a `useTranslations()` hook and persistent language selection. Upload page fully translated with dynamic filter/speed labels.
 - **Payment Processing**: Integrated **Stripe** for credit/debit card payments, dedicated pages for various Mobile Money providers (Orange Money, MTN Money, Wave), and bank transfers. This includes webhook handling, customer management, and secure transaction processing.
 - **Social Features**: Includes a follow/unfollow system with a personalized "Following" feed and enhanced user profiles.
+- **Share Purchase System**: Platform stock/equity purchase system allowing users to invest in FreeMind Vision at $108 per share. Features include:
+  - **Purchase Flow**: Multi-step process with quantity selection → Stripe payment intent creation → secure payment confirmation
+  - **Portfolio Management**: Real-time tracking of shares owned, current value, profit/loss calculations, and transaction history
+  - **Platform Stats**: Display of current share price, total platform valuation, number of investors, and price history
+  - **Stripe Integration**: Full payment processing with webhook support for automatic share allocation upon successful payment
+  - **Database Schema**: Dedicated tables for shares, share transactions, and historical price tracking
+- **Search Interface**: TikTok-style expandable search bar in header that transitions from icon to full search input on click, with mobile-optimized version.
 
 ### Core System Design
-- **Database**: **PostgreSQL** (Neon) is used for data persistence, managed by **Drizzle ORM**. The schema includes tables for users, videos, comments, likes, gift types, gifts, credit packages, transactions, and sessions.
+- **Database**: **PostgreSQL** (Neon) is used for data persistence, managed by **Drizzle ORM**. The schema includes tables for users, videos, comments, likes, gift types, gifts, credit packages, transactions, shares, share transactions, share price history, and sessions.
 - **Revenue Model**: Creators receive 60% of the value of gifts received (converted to USD), with the platform retaining 40%.
+- **Equity Model**: Platform shares are sold at $108 each with a total platform valuation of $1,080,000 (10,000 shares). Share price history is tracked for investor transparency.
 - **Project Structure**: Organized into `client/` (React frontend), `server/` (Express backend), and `shared/` (shared types and Drizzle schema).
 
 ### API Endpoints
-Comprehensive API endpoints are provided for authentication, video management, comments, gift transactions, credit purchases, creator dashboard statistics, and user profile retrieval.
+Comprehensive API endpoints are provided for:
+- **Authentication**: User login, logout, session management
+- **Video Management**: Upload, fetch, delete videos with stats
+- **Social Interactions**: Comments, likes, follows, messages
+- **Monetization**: Gift transactions, credit purchases, earnings tracking
+- **Analytics**: Creator dashboard statistics, video performance
+- **Share System**: Current share price, portfolio holdings, transaction history, purchase intent creation, Stripe webhooks
+- **User Profiles**: Profile retrieval and updates
 
 ## External Dependencies
 
