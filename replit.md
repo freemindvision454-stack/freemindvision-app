@@ -28,9 +28,18 @@ The platform features a modern, vibrant, and responsive design, heavily inspired
 - **Frontend**: Developed with **React** and **TypeScript**, using **Wouter** for routing, **TanStack Query** for data fetching, and **React Hook Form** with Zod for form validation.
 - **Backend**: Built on **Express.js** with **TypeScript**, utilizing **Drizzle ORM** for type-safe PostgreSQL interactions and **Multer** for file uploads. **Passport.js** manages session authentication.
 - **Authentication**: Integrates **Replit Auth** (OpenID Connect) for multi-provider login (Google, GitHub, Email).
-- **Video Platform**: Supports vertical video uploads, a dynamic feed, and basic interaction tracking (views, likes, comments).
+- **Video Platform**: Supports vertical video uploads with **TikTok-style effects**, a dynamic feed, and basic interaction tracking (views, likes, comments).
+  - **Upload Page Features**:
+    - **Real-time Video Preview**: Live preview with instant effect application
+    - **7 Video Filters**: None, Black & White, Sepia, Vintage, Bright, Contrast, Saturate
+    - **3 Speed Controls**: Normal (1.0x), Slow (0.5x), Fast (2.0x)
+    - **Music Section**: Placeholder for future music integration
+    - **FreeMind Vision Branding**: Logo with pink-violet gradient
+    - **Fully Localized**: All UI elements translated across 7 languages
+    - **Form Validation**: Character counters (title: 200 max, description: 500 max)
+    - **Accessibility**: Complete data-testid coverage for automated testing
 - **Monetization**: Implements a virtual currency (YimiCoins) system, credit packages, and virtual gifts with a 60/40 revenue split for creators. Earnings are displayed in multiple currencies.
-- **Internationalization (i18n)**: Supports 7 languages (French, English, Wolof, Bambara, Swahili, Arabic, Portuguese) using a React Context-based system with a `useTranslations()` hook and persistent language selection.
+- **Internationalization (i18n)**: Supports 7 languages (French, English, Wolof, Bambara, Swahili, Arabic, Portuguese) using a React Context-based system with a `useTranslations()` hook and persistent language selection. Upload page fully translated with dynamic filter/speed labels.
 - **Payment Processing**: Integrated **Stripe** for credit/debit card payments, dedicated pages for various Mobile Money providers (Orange Money, MTN Money, Wave), and bank transfers. This includes webhook handling, customer management, and secure transaction processing.
 - **Social Features**: Includes a follow/unfollow system with a personalized "Following" feed and enhanced user profiles.
 
