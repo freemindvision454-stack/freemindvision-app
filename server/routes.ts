@@ -10,6 +10,7 @@ import Stripe from "stripe";
 import { db } from "./db";
 import { users, referrals } from "../shared/schema";
 import { eq } from "drizzle-orm";
+import { getOnlineUsers, isUserOnline } from "./websocket";
 
 // Configure multer for file uploads
 const uploadStorage = multer.diskStorage({
@@ -610,6 +611,29 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("Error counting unread messages:", error);
       res.status(500).json({ message: "Failed to count unread messages" });
+    }
+  });
+
+  // Get online users
+  app.get("/api/users/online", isAuthenticated, async (req: any, res) => {
+    try {
+      const onlineUserIds = getOnlineUsers();
+      res.json({ onlineUsers: onlineUserIds });
+    } catch (error) {
+      console.error("Error fetching online users:", error);
+      res.status(500).json({ message: "Failed to fetch online users" });
+    }
+  });
+
+  // Check if specific user is online
+  app.get("/api/users/:userId/online", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.userId;
+      const online = isUserOnline(userId);
+      res.json({ userId, online });
+    } catch (error) {
+      console.error("Error checking user status:", error);
+      res.status(500).json({ message: "Failed to check user status" });
     }
   });
 

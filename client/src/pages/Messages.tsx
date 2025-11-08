@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +42,7 @@ interface Conversation {
 export default function Messages() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isUserOnline } = useWebSocket();
   const [selectedUser, setSelectedUser] = useState<Conversation["user"] | null>(null);
   const [messageContent, setMessageContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -298,12 +300,21 @@ export default function Messages() {
                     data-testid={`item-conversation-${index}`}
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={conversation.user.profileImageUrl || undefined} />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {getUserDisplayName(conversation.user)[0].toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar>
+                          <AvatarImage src={conversation.user.profileImageUrl || undefined} />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {getUserDisplayName(conversation.user)[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {/* Online status indicator */}
+                        <div 
+                          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                            isUserOnline(conversation.user.id) ? 'bg-green-500' : 'bg-gray-400'
+                          }`}
+                          data-testid={`status-${isUserOnline(conversation.user.id) ? 'online' : 'offline'}-${index}`}
+                        />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="font-medium truncate" data-testid={`text-conversation-name-${index}`}>
@@ -356,15 +367,29 @@ export default function Messages() {
             <>
               <CardHeader className="border-b">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={selectedUser.profileImageUrl || undefined} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getUserDisplayName(selectedUser)[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <CardTitle data-testid="text-chat-with">
-                    {getUserDisplayName(selectedUser)}
-                  </CardTitle>
+                  <div className="relative">
+                    <Avatar>
+                      <AvatarImage src={selectedUser.profileImageUrl || undefined} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {getUserDisplayName(selectedUser)[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Online status indicator */}
+                    <div 
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
+                        isUserOnline(selectedUser.id) ? 'bg-green-500' : 'bg-gray-400'
+                      }`}
+                      data-testid={`status-chat-${isUserOnline(selectedUser.id) ? 'online' : 'offline'}`}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle data-testid="text-chat-with">
+                      {getUserDisplayName(selectedUser)}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground font-normal">
+                      {isUserOnline(selectedUser.id) ? 'En ligne' : 'Hors ligne'}
+                    </p>
+                  </div>
                 </div>
               </CardHeader>
               <ScrollArea className="h-[calc(100vh-420px)] p-4">

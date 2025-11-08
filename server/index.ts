@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupWebSocket } from "./websocket";
 
 const app = express();
 
@@ -73,6 +74,10 @@ app.use((req, res, next) => {
     
     // Create HTTP server AFTER determining environment
     const server = createServer(app);
+    
+    // Setup WebSocket
+    setupWebSocket(server);
+    log(`✓ WebSocket server configured`);
     
     if (isDevelopment) {
       log(`Setting up Vite for development...`);
