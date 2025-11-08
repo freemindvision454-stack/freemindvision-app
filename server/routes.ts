@@ -170,6 +170,49 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   );
 
+  // Search videos
+  app.get("/api/videos/search", async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      
+      if (!query || query.trim().length === 0) {
+        return res.json([]);
+      }
+
+      const searchTerm = query.trim().toLowerCase();
+      const allVideos = await storage.getVideos(500); // Get more videos for searching
+
+      // Search in title, description, and creator name
+      const matchingVideos = await Promise.all(
+        allVideos.map(async (video) => {
+          const creator = await storage.getUser(video.creatorId);
+          const creatorName = creator?.firstName && creator?.lastName
+            ? `${creator.firstName} ${creator.lastName}`.toLowerCase()
+            : creator?.email?.split("@")[0]?.toLowerCase() || "";
+          
+          const titleMatch = video.title.toLowerCase().includes(searchTerm);
+          const descMatch = video.description?.toLowerCase().includes(searchTerm) || false;
+          const creatorMatch = creatorName.includes(searchTerm);
+
+          if (titleMatch || descMatch || creatorMatch) {
+            return {
+              ...video,
+              creator,
+            };
+          }
+          return null;
+        })
+      );
+
+      // Filter out null results and limit to 50
+      const results = matchingVideos.filter(v => v !== null).slice(0, 50);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching videos:", error);
+      res.status(500).json({ message: "Failed to search videos" });
+    }
+  });
+
   // Increment video views
   app.post("/api/videos/:videoId/view", async (req, res) => {
     try {

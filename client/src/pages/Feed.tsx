@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Video, User } from "@shared/schema";
 import { GiftModal } from "@/components/GiftModal";
+import { ShareModal } from "@/components/ShareModal";
 import { useAuth } from "@/hooks/useAuth";
 
 interface VideoWithCreator extends Video {
@@ -36,6 +37,8 @@ export default function Feed() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [videoToShare, setVideoToShare] = useState<VideoWithCreator | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
 
@@ -83,8 +86,11 @@ export default function Feed() {
   };
 
   const handleShare = (videoId: string) => {
-    // Will implement in integration phase
-    console.log("Share video:", videoId);
+    const video = videos?.find(v => v.id === videoId);
+    if (video) {
+      setVideoToShare(video);
+      setShowShareModal(true);
+    }
   };
 
   if (isLoading) {
@@ -332,6 +338,21 @@ export default function Feed() {
           onClose={() => setShowGiftModal(false)}
           recipientId={currentVideo.creatorId}
           videoId={currentVideo.id}
+        />
+      )}
+
+      {/* Share Modal */}
+      {videoToShare && (
+        <ShareModal
+          open={showShareModal}
+          onOpenChange={setShowShareModal}
+          videoUrl={videoToShare.videoUrl}
+          videoTitle={videoToShare.title}
+          videoCreator={
+            videoToShare.creator.firstName && videoToShare.creator.lastName
+              ? `${videoToShare.creator.firstName} ${videoToShare.creator.lastName}`
+              : videoToShare.creator.email?.split("@")[0] || "Creator"
+          }
         />
       )}
     </>

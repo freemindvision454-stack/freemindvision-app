@@ -18,6 +18,7 @@ import BankTransferPayment from "@/pages/BankTransferPayment";
 import Live from "@/pages/Live";
 import Messages from "@/pages/Messages";
 import Settings from "@/pages/Settings";
+import Search from "@/pages/Search";
 import AppLayout from "@/components/AppLayout";
 
 function Router() {
@@ -58,6 +59,11 @@ function Router() {
       <Route path="/settings">
         <AppLayout>
           <Settings />
+        </AppLayout>
+      </Route>
+      <Route path="/search">
+        <AppLayout>
+          <Search />
         </AppLayout>
       </Route>
       <Route path="/dashboard">

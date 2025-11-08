@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings } from "lucide-react";
+import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +21,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const navItems = [
     { href: "/", label: "Home", icon: Home, testId: "nav-home" },
+    { href: "/search", label: "Search", icon: Search, testId: "nav-search" },
     { href: "/upload", label: "Upload", icon: UploadIcon, testId: "nav-upload" },
     { href: "/live", label: "Live", icon: Video, testId: "nav-live" },
     { href: "/messages", label: "Messages", icon: MessageCircle, testId: "nav-messages" },

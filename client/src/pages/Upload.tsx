@@ -27,6 +27,19 @@ export default function Upload() {
     { id: "bright", name: t.upload.bright, filter: "brightness(120%) saturate(120%)" },
     { id: "contrast", name: t.upload.contrast, filter: "contrast(130%)" },
     { id: "saturate", name: t.upload.saturate, filter: "saturate(150%)" },
+    { id: "neon", name: "Neon Glow", filter: "brightness(110%) saturate(200%) contrast(120%) hue-rotate(15deg)" },
+    { id: "cool", name: "Cool Vibes", filter: "brightness(105%) saturate(90%) hue-rotate(200deg)" },
+    { id: "warm", name: "Warm Sunset", filter: "brightness(105%) saturate(120%) hue-rotate(-10deg)" },
+    { id: "blur", name: "Soft Blur", filter: "blur(2px) brightness(105%)" },
+    { id: "sharpen", name: "Ultra Sharp", filter: "contrast(150%) brightness(105%)" },
+    { id: "huerotate", name: "Rainbow Shift", filter: "hue-rotate(90deg) saturate(130%)" },
+    { id: "invert", name: "Inverted", filter: "invert(100%) hue-rotate(180deg)" },
+    { id: "dramatic", name: "Dramatic", filter: "contrast(140%) saturate(140%) brightness(90%)" },
+    { id: "pastel", name: "Soft Pastel", filter: "brightness(115%) saturate(70%) contrast(85%)" },
+    { id: "cinematic", name: "Film", filter: "sepia(25%) contrast(115%) saturate(120%) brightness(95%)" },
+    { id: "faded", name: "Vintage Fade", filter: "brightness(110%) saturate(50%) contrast(80%)" },
+    { id: "vibrant", name: "Ultra Vibrant", filter: "saturate(200%) brightness(110%) contrast(120%)" },
+    { id: "monochrome", name: "Monochrome", filter: "grayscale(100%) contrast(120%)" },
   ];
 
   const speedOptions = [
