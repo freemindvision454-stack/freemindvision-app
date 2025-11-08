@@ -10,49 +10,12 @@ deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 
+[deployment.env]
+NODE_ENV = "production"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3002
-
-[[ports]]
-localPort = 5002
-externalPort = 3000
-
-[[ports]]
-localPort = 33037
-externalPort = 3003
-
-[[ports]]
-localPort = 34825
-externalPort = 8000
-
-[[ports]]
-localPort = 36335
-externalPort = 3001
-
-[[ports]]
-localPort = 37193
-externalPort = 5173
-
-[[ports]]
-localPort = 37717
-externalPort = 6000
-
-[[ports]]
-localPort = 37875
-externalPort = 5000
-
-[[ports]]
-localPort = 39219
-externalPort = 6800
-
-[[ports]]
-localPort = 41201
-externalPort = 4200
 
 [env]
 PORT = "5000"

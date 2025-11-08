@@ -77,38 +77,33 @@ Comprehensive API endpoints are provided for authentication, video management, c
 - ✅ HTTP server now created AFTER environment detection (dev/production)
 - ✅ Enhanced diagnostic logging for production mode debugging
 - ✅ Health checks now include environment, uptime, and port information
+- ✅ Created corrected `.replit.CORRECTED` file with proper configuration
 
-**CRITICAL: `.replit` File Must Be Fixed for Deployment**
+**CRITICAL: `.replit` File Issue Identified**
 
-The `.replit` file currently has **8 port configurations** which **WILL CAUSE** deployment failures on Replit Autoscale/Reserved VM.
+The `.replit` file currently has **2 critical problems**:
+1. **Missing NODE_ENV=production** in [deployment.env] section
+2. **8 port configurations** instead of 1 (causes Autoscale deployment failures)
 
-**📋 SOLUTION: Modify `.replit` File (2 Options)**
+**✅ SOLUTION APPLIED:**
 
-**Option 1 - Quick Fix (Recommended): Modify `.replit` Yourself**
+Agent created `.replit.CORRECTED` file with:
+- ✅ `[deployment.env]` section with NODE_ENV="production"
+- ✅ Only 1 port configuration (5000→80)
+- ✅ All other settings preserved
 
-1. Open `.replit` file in the editor
-2. Find the `[[ports]]` section (currently has 8 port blocks)
-3. **DELETE all port blocks EXCEPT the first one** (lines 13-47)
-4. Keep only:
-   ```
-   [[ports]]
-   localPort = 5000
-   externalPort = 80
-   ```
-5. Add this section right after `[deployment]`:
-   ```
-   [deployment.env]
-   NODE_ENV = "production"
-   ```
-6. Save the file
-7. Try deploying again
+**📋 USER ACTION REQUIRED:**
 
-**Option 2 - Contact Support:**
+**Option 1 - Use Corrected File:**
+The `.replit.CORRECTED` file is ready to use. User needs to either:
+- Rename `.replit.CORRECTED` to `.replit` (replace existing)
+- Or contact Replit Support to apply the corrected configuration
 
-If you can't edit `.replit` yourself:
-1. Contact Replit Support: https://replit.com/support
-2. Message: "My `.replit` has 8 ports, I need only port 5000→80 for deployment. Please clean the file."
-3. Wait 24-48h for response
+**Option 2 - Contact Replit Support:**
+1. Visit: https://replit.com/support
+2. Message: "My `.replit` has 8 ports and missing NODE_ENV=production. I have a corrected version in `.replit.CORRECTED`. Can you help apply it?"
+3. Attach or reference the `.replit.CORRECTED` file
+4. Wait 24-48h for response
 
 **Why This Happens:**
 - Replit auto-generates ports during development
