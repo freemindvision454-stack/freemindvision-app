@@ -847,5 +847,196 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
+  // ===== SHARE/STOCK ROUTES =====
+
+  // Get current share price
+  app.get("/api/shares/current-price", async (req, res) => {
+    try {
+      const currentPrice = await storage.getCurrentSharePrice();
+      res.json(currentPrice || { priceUsd: 108, platformValue: 1080000, totalShares: 10000 });
+    } catch (error) {
+      console.error("Error fetching current price:", error);
+      res.status(500).json({ message: "Failed to fetch current price" });
+    }
+  });
+
+  // Get share stats
+  app.get("/api/shares/stats", async (req, res) => {
+    try {
+      const stats = await storage.getShareStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching share stats:", error);
+      res.status(500).json({ message: "Failed to fetch share stats" });
+    }
+  });
+
+  // Get user's shares
+  app.get("/api/shares/my-shares", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userShares = await storage.getUserShares(userId);
+      const totalShares = await storage.getTotalUserShares(userId);
+      const currentPrice = await storage.getCurrentSharePrice();
+      
+      const totalInvested = userShares.reduce((sum, share) => sum + share.totalCost, 0);
+      const currentValue = totalShares * (currentPrice?.priceUsd || 108);
+      const profitLoss = currentValue - totalInvested;
+      const profitLossPercentage = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
+
+      res.json({
+        shares: userShares,
+        summary: {
+          totalShares,
+          totalInvested,
+          currentValue,
+          profitLoss,
+          profitLossPercentage,
+          currentPrice: currentPrice?.priceUsd || 108,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching user shares:", error);
+      res.status(500).json({ message: "Failed to fetch user shares" });
+    }
+  });
+
+  // Get user's share transactions
+  app.get("/api/shares/my-transactions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const transactions = await storage.getUserShareTransactions(userId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ message: "Failed to fetch transactions" });
+    }
+  });
+
+  // Get share price history
+  app.get("/api/shares/price-history", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 30;
+      const history = await storage.getSharePriceHistory(limit);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching price history:", error);
+      res.status(500).json({ message: "Failed to fetch price history" });
+    }
+  });
+
+  // Purchase shares
+  app.post("/api/shares/purchase", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { quantity } = req.body;
+
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({ message: "Invalid quantity" });
+      }
+
+      // Get current price
+      const currentPrice = await storage.getCurrentSharePrice();
+      const pricePerShare = currentPrice?.priceUsd || 108;
+      const totalAmount = pricePerShare * quantity;
+
+      // Create share transaction
+      const transaction = await storage.createShareTransaction({
+        userId,
+        type: "purchase",
+        quantity,
+        pricePerShare,
+        totalAmount,
+        status: "pending",
+        paymentMethod: "stripe",
+      });
+
+      // If Stripe is configured, create payment intent
+      if (stripe) {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(totalAmount * 100), // Convert to cents
+          currency: "usd",
+          metadata: {
+            userId,
+            transactionId: transaction.id,
+            type: "share_purchase",
+            quantity: quantity.toString(),
+          },
+        });
+
+        await storage.updateShareTransactionStatus(
+          transaction.id,
+          "pending",
+          paymentIntent.id
+        );
+
+        res.json({
+          clientSecret: paymentIntent.client_secret,
+          transactionId: transaction.id,
+          amount: totalAmount,
+        });
+      } else {
+        res.status(503).json({ message: "Payment system not configured" });
+      }
+    } catch (error) {
+      console.error("Error purchasing shares:", error);
+      res.status(500).json({ message: "Failed to purchase shares" });
+    }
+  });
+
+  // Stripe webhook for share purchases
+  app.post("/api/shares/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    if (!stripe) {
+      return res.status(503).json({ message: "Stripe not configured" });
+    }
+
+    const sig = req.headers["stripe-signature"] as string;
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET || ""
+      );
+    } catch (err: any) {
+      console.error("Webhook signature verification failed:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === "payment_intent.succeeded") {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const { transactionId, quantity, userId } = paymentIntent.metadata;
+
+      if (transactionId && quantity && userId) {
+        // Update transaction status
+        await storage.updateShareTransactionStatus(transactionId, "completed");
+
+        // Get transaction details
+        const transactions = await storage.getUserShareTransactions(userId);
+        const transaction = transactions.find(t => t.id === transactionId);
+
+        if (transaction) {
+          // Create share record
+          await storage.createShare({
+            userId,
+            quantity: parseInt(quantity),
+            purchasePrice: transaction.pricePerShare,
+            totalCost: transaction.totalAmount,
+          });
+        }
+      }
+    } else if (event.type === "payment_intent.payment_failed") {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const { transactionId } = paymentIntent.metadata;
+
+      if (transactionId) {
+        await storage.updateShareTransactionStatus(transactionId, "failed");
+      }
+    }
+
+    res.json({ received: true });
+  });
+
   return app;
 }

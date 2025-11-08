@@ -11,6 +11,9 @@ import {
   gifts,
   creditPackages,
   transactions,
+  shares,
+  shareTransactions,
+  sharePriceHistory,
   type User,
   type UpsertUser,
   type Video,
@@ -29,6 +32,11 @@ import {
   type CreditPackage,
   type Transaction,
   type InsertTransaction,
+  type Share,
+  type InsertShare,
+  type ShareTransaction,
+  type InsertShareTransaction,
+  type SharePriceHistory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, inArray } from "drizzle-orm";
@@ -95,6 +103,17 @@ export interface IStorage {
   getMessages(userId: string, otherUserId: string, limit?: number): Promise<Message[]>;
   markMessagesAsRead(recipientId: string, senderId: string): Promise<void>;
   getUnreadMessagesCount(userId: string): Promise<number>;
+
+  // Share operations
+  getCurrentSharePrice(): Promise<SharePriceHistory | undefined>;
+  getUserShares(userId: string): Promise<Share[]>;
+  getTotalUserShares(userId: string): Promise<number>;
+  createShare(share: InsertShare): Promise<Share>;
+  createShareTransaction(transaction: InsertShareTransaction): Promise<ShareTransaction>;
+  updateShareTransactionStatus(transactionId: string, status: string, stripePaymentIntentId?: string): Promise<void>;
+  getSharePriceHistory(limit?: number): Promise<SharePriceHistory[]>;
+  getShareStats(): Promise<{ currentPrice: number; totalShares: number; platformValue: number; totalInvestors: number }>;
+  getUserShareTransactions(userId: string): Promise<ShareTransaction[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -596,6 +615,100 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result[0]?.count || 0;
+  }
+
+  // Share operations
+  async getCurrentSharePrice(): Promise<SharePriceHistory | undefined> {
+    const [price] = await db
+      .select()
+      .from(sharePriceHistory)
+      .orderBy(desc(sharePriceHistory.createdAt))
+      .limit(1);
+    return price;
+  }
+
+  async getUserShares(userId: string): Promise<Share[]> {
+    return await db
+      .select()
+      .from(shares)
+      .where(eq(shares.userId, userId))
+      .orderBy(desc(shares.purchasedAt));
+  }
+
+  async getTotalUserShares(userId: string): Promise<number> {
+    const userShares = await this.getUserShares(userId);
+    return userShares.reduce((total, share) => total + share.quantity, 0);
+  }
+
+  async createShare(share: InsertShare): Promise<Share> {
+    const [newShare] = await db
+      .insert(shares)
+      .values(share)
+      .returning();
+    return newShare;
+  }
+
+  async createShareTransaction(transaction: InsertShareTransaction): Promise<ShareTransaction> {
+    const [newTransaction] = await db
+      .insert(shareTransactions)
+      .values(transaction)
+      .returning();
+    return newTransaction;
+  }
+
+  async updateShareTransactionStatus(
+    transactionId: string,
+    status: string,
+    stripePaymentIntentId?: string
+  ): Promise<void> {
+    const updates: any = { status };
+    if (stripePaymentIntentId) {
+      updates.stripePaymentIntentId = stripePaymentIntentId;
+    }
+    await db
+      .update(shareTransactions)
+      .set(updates)
+      .where(eq(shareTransactions.id, transactionId));
+  }
+
+  async getSharePriceHistory(limit: number = 30): Promise<SharePriceHistory[]> {
+    return await db
+      .select()
+      .from(sharePriceHistory)
+      .orderBy(desc(sharePriceHistory.createdAt))
+      .limit(limit);
+  }
+
+  async getShareStats(): Promise<{
+    currentPrice: number;
+    totalShares: number;
+    platformValue: number;
+    totalInvestors: number;
+  }> {
+    const currentPrice = await this.getCurrentSharePrice();
+    
+    const totalSharesResult = await db
+      .select({ total: sql<number>`COALESCE(SUM(${shares.quantity}), 0)::int` })
+      .from(shares);
+
+    const totalInvestorsResult = await db
+      .select({ count: sql<number>`COUNT(DISTINCT ${shares.userId})::int` })
+      .from(shares);
+
+    return {
+      currentPrice: currentPrice?.priceUsd || 108,
+      totalShares: totalSharesResult[0]?.total || 0,
+      platformValue: currentPrice?.platformValue || 1080000,
+      totalInvestors: totalInvestorsResult[0]?.count || 0,
+    };
+  }
+
+  async getUserShareTransactions(userId: string): Promise<ShareTransaction[]> {
+    return await db
+      .select()
+      .from(shareTransactions)
+      .where(eq(shareTransactions.userId, userId))
+      .orderBy(desc(shareTransactions.createdAt));
   }
 }
 
