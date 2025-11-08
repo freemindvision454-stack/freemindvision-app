@@ -1,12 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search as SearchIcon, Play, Heart, MessageCircle } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Search as SearchIcon, Play, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Video, User } from "@shared/schema";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 interface VideoWithCreator extends Video {
   creator: User;
@@ -15,8 +13,16 @@ interface VideoWithCreator extends Video {
 }
 
 export default function Search() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [location] = useLocation();
   const [activeSearch, setActiveSearch] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q');
+    if (query) {
+      setActiveSearch(query);
+    }
+  }, [location]);
 
   const { data: searchResults, isLoading } = useQuery<VideoWithCreator[]>({
     queryKey: ["/api/videos/search", { q: activeSearch }],
@@ -28,41 +34,8 @@ export default function Search() {
     enabled: activeSearch.length > 0,
   });
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setActiveSearch(searchQuery.trim());
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Search Header */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher des vidéos, créateurs, hashtags..."
-                className="pl-10 h-12 text-base"
-                data-testid="input-search"
-              />
-            </div>
-            <Button 
-              type="submit" 
-              size="lg"
-              className="px-6"
-              data-testid="button-search"
-            >
-              Rechercher
-            </Button>
-          </form>
-        </div>
-      </div>
-
       {/* Search Results */}
       <div className="container mx-auto px-4 py-6">
         {!activeSearch && (

@@ -1,7 +1,8 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings, Search, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import logoUrl from "@assets/1762348677561_1762361963790.jpg";
@@ -12,9 +13,10 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const displayName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
@@ -22,18 +24,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const navItems = [
     { href: "/", label: "Home", icon: Home, testId: "nav-home" },
-    { href: "/search", label: "Search", icon: Search, testId: "nav-search" },
-    { href: "/upload", label: "Upload", icon: UploadIcon, testId: "nav-upload" },
     { href: "/live", label: "Live", icon: Video, testId: "nav-live" },
+    { href: "/upload", label: "Upload", icon: UploadIcon, testId: "nav-upload" },
     { href: "/messages", label: "Messages", icon: MessageCircle, testId: "nav-messages" },
+    { href: "/analytics", label: "Dashboard", icon: TrendingUp, testId: "nav-dashboard" },
   ];
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setLocation(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between gap-4 h-16">
             {/* Logo */}
             <Link href="/" data-testid="link-home">
               <div className="flex items-center gap-3 hover-elevate p-2 rounded-lg transition-all cursor-pointer">
@@ -42,14 +52,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   alt="FreeMind Vision Logo" 
                   className="h-10 w-10 object-contain"
                 />
-                <div className="text-2xl font-poppins font-bold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
+                <div className="text-2xl font-poppins font-bold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent hidden lg:block">
                   FreeMind
                 </div>
               </div>
             </Link>
 
+            {/* Search Bar - Desktop */}
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher des vidéos..."
+                  className="pl-10 pr-4"
+                  data-testid="input-search-header"
+                />
+              </div>
+            </form>
+
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-2">
+            <nav className="hidden lg:flex items-center gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location === item.href;
@@ -57,14 +81,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 return (
                   <Link key={item.href} href={item.href} data-testid={item.testId}>
                     <div
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover-elevate cursor-pointer ${
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all hover-elevate cursor-pointer ${
                         isActive
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       <Icon className="w-5 h-5" />
-                      <span>{item.label}</span>
+                      <span className="text-sm">{item.label}</span>
                     </div>
                   </Link>
                 );
@@ -72,19 +96,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </nav>
 
             {/* User Menu */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
                 <Coins className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium text-primary" data-testid="text-user-credits">
                   {(user?.creditBalance || 0).toLocaleString()}
                 </span>
               </div>
-
-              <Link href="/analytics" data-testid="link-analytics">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <TrendingUp className="w-5 h-5" />
-                </Button>
-              </Link>
 
               <NotificationsDropdown />
 
@@ -116,18 +134,34 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 hover-elevate rounded-lg"
+              className="lg:hidden p-2 hover-elevate rounded-lg"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
+
+          {/* Search Bar - Mobile */}
+          <div className="md:hidden pb-3">
+            <form onSubmit={handleSearch} className="w-full">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher des vidéos..."
+                  className="pl-10 pr-4"
+                  data-testid="input-search-header-mobile"
+                />
+              </div>
+            </form>
+          </div>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-background">
+          <div className="lg:hidden border-t bg-background">
             <div className="container mx-auto px-4 py-4 space-y-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -186,22 +220,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden sticky bottom-0 z-50 border-t bg-background">
+      <nav className="lg:hidden sticky bottom-0 z-50 border-t bg-background">
         <div className="flex items-center justify-around h-16">
-          {navItems.slice(0, 4).map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href;
 
             return (
               <Link key={item.href} href={item.href} data-testid={`${item.testId}-bottom`}>
                 <div
-                  className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all hover-elevate cursor-pointer ${
+                  className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all hover-elevate cursor-pointer ${
                     isActive
                       ? "text-primary"
                       : "text-muted-foreground"
                   }`}
                 >
-                  <Icon className="w-6 h-6" />
+                  <Icon className="w-5 h-5" />
                   <span className="text-xs font-medium">{item.label}</span>
                 </div>
               </Link>
