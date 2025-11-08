@@ -301,3 +301,74 @@ export const followsRelations = relations(follows, ({ one }) => ({
     relationName: "following",
   }),
 }));
+
+// Stock/Share Price History - Tracks the value of FreeMind Vision shares over time
+export const sharePriceHistory = pgTable("share_price_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  priceUsd: real("price_usd").notNull(), // Price per share in USD
+  platformValue: real("platform_value").notNull(), // Total platform valuation
+  totalShares: integer("total_shares").notNull(), // Total shares issued
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("share_price_created_at_idx").on(table.createdAt),
+]);
+
+export type SharePriceHistory = typeof sharePriceHistory.$inferSelect;
+
+// Shares owned by users - Represents ownership stakes in FreeMind Vision
+export const shares = pgTable("shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  quantity: integer("quantity").notNull(), // Number of shares owned
+  purchasePrice: real("purchase_price").notNull(), // Price paid per share in USD
+  totalCost: real("total_cost").notNull(), // Total amount paid
+  purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
+}, (table) => [
+  index("shares_user_idx").on(table.userId),
+]);
+
+export type Share = typeof shares.$inferSelect;
+export const insertShareSchema = createInsertSchema(shares).omit({
+  id: true,
+  purchasedAt: true,
+});
+export type InsertShare = z.infer<typeof insertShareSchema>;
+
+// Share Transactions - Purchases and sales of shares
+export const shareTransactions = pgTable("share_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 50 }).notNull(), // 'purchase' or 'sale'
+  quantity: integer("quantity").notNull(), // Number of shares
+  pricePerShare: real("price_per_share").notNull(), // Price per share in USD
+  totalAmount: real("total_amount").notNull(), // Total transaction amount
+  status: varchar("status", { length: 50 }).default("pending").notNull(), // 'pending', 'completed', 'failed'
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"), // Stripe payment reference
+  paymentMethod: varchar("payment_method", { length: 50 }), // Payment method used
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("share_transactions_user_idx").on(table.userId),
+  index("share_transactions_status_idx").on(table.status),
+]);
+
+export type ShareTransaction = typeof shareTransactions.$inferSelect;
+export const insertShareTransactionSchema = createInsertSchema(shareTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertShareTransaction = z.infer<typeof insertShareTransactionSchema>;
+
+// Relations for shares
+export const sharesRelations = relations(shares, ({ one }) => ({
+  user: one(users, {
+    fields: [shares.userId],
+    references: [users.id],
+  }),
+}));
+
+export const shareTransactionsRelations = relations(shareTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [shareTransactions.userId],
+    references: [users.id],
+  }),
+}));
