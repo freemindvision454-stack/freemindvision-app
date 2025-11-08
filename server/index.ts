@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -53,9 +54,11 @@ app.use((req, res, next) => {
     console.log(`[STARTUP] PORT: ${process.env.PORT || '5000'}`);
     log(`Starting server in ${nodeEnv} mode...`);
     
-    const server = await registerRoutes(app);
+    // Register all routes first
+    await registerRoutes(app);
     log(`Routes registered successfully`);
 
+    // Add error handler middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
@@ -64,20 +67,32 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
 
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
+    // Determine environment and setup appropriate middleware
     const isDevelopment = process.env.NODE_ENV !== "production";
     console.log(`[STARTUP] isDevelopment: ${isDevelopment}`);
+    
+    // Create HTTP server AFTER determining environment
+    const server = createServer(app);
     
     if (isDevelopment) {
       log(`Setting up Vite for development...`);
       await setupVite(app, server);
+      log(`Vite development server configured`);
     } else {
-      log(`Serving static files for production...`);
-      console.log(`[STARTUP] Static files directory: ${process.cwd()}/dist/public`);
-      serveStatic(app);
-      log(`Static files setup complete`);
+      log(`✓ Production mode detected`);
+      console.log(`[STARTUP] Production mode: NODE_ENV=${process.env.NODE_ENV}`);
+      console.log(`[STARTUP] Current working directory: ${process.cwd()}`);
+      console.log(`[STARTUP] Static files will be served from: ${process.cwd()}/dist/public`);
+      
+      try {
+        serveStatic(app);
+        log(`✓ Static files middleware configured successfully`);
+        console.log(`[STARTUP] Static file serving is active`);
+      } catch (error: any) {
+        log(`ERROR: Failed to setup static files: ${error.message}`);
+        console.error(`[STARTUP] Static files error:`, error);
+        throw error;
+      }
     }
 
     // ALWAYS serve the app on the port specified in the environment variable PORT

@@ -1,6 +1,5 @@
 import type { Express, Request, Response } from "express";
 import express from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import multer from "multer";
@@ -51,21 +50,27 @@ if (process.env.STRIPE_SECRET_KEY) {
   });
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<Express> {
   // Health check endpoint (must be first, no auth required)
   app.get("/health", (_req: Request, res: Response) => {
+    console.log(`[HEALTH] Health check requested`);
     res.status(200).json({ 
       status: "ok", 
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
+      uptime: process.uptime(),
+      port: process.env.PORT || '5000'
     });
   });
 
   // Root health check
   app.get("/api/health", (_req: Request, res: Response) => {
+    console.log(`[HEALTH] API health check requested`);
     res.status(200).json({ 
       status: "ok", 
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      uptime: process.uptime()
     });
   });
 
@@ -631,6 +636,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  return app;
 }

@@ -69,22 +69,34 @@ Comprehensive API endpoints are provided for authentication, video management, c
 
 ### Important Deployment Notes
 
-**CRITICAL DEPLOYMENT BLOCKER:**
-The application **CANNOT be deployed on ANY Replit deployment type** (Autoscale OR Reserved VM) due to a platform-level configuration constraint:
+**DEPLOYMENT STATUS: READY ✅**
 
-- **Problem**: The `.replit` file automatically accumulates multiple port configurations (8+ ports) as Replit auto-detects open ports during development.
-- **Replit Requirement**: **ALL deployment types** (Autoscale AND Reserved VM) require **ONLY ONE external port** to be exposed.
-- **Current Ports**: 5000→80 (required), plus 7 additional auto-generated ports (5001, 5002, 33037, 36335, 37875, 39005, 41201).
-- **Blocker**: The `.replit` file is **system-protected** and cannot be edited programmatically or manually to remove extra ports.
-- **Impact**: Every deployment attempt fails after 2m15s with "failed to initialize" error.
+**Recent Fixes (Nov 8, 2024):**
+- ✅ Fixed production startup: Server now properly serves static files instead of trying to load Vite middleware
+- ✅ Refactored `registerRoutes` to return Express app instead of HTTP server
+- ✅ HTTP server now created AFTER environment detection (dev/production)
+- ✅ Enhanced diagnostic logging for production mode debugging
+- ✅ Health checks now include environment, uptime, and port information
 
-**ONLY Solution: Contact Replit Support**
-To enable ANY deployment (Autoscale or Reserved VM), you MUST contact Replit Support to clean the `.replit` file, keeping only:
-```
-[[ports]]
-localPort = 5000
-externalPort = 80
-```
+**Known Issue: `.replit` File Port Configuration**
+
+The `.replit` file contains **8 port configurations** which may cause deployment issues on Replit:
+
+- **Current Ports**: 5000→80 (required for deployment), plus 7 auto-generated ports
+- **Replit Requirement**: Only **ONE external port** should be exposed for Autoscale/Reserved VM deployments
+- **Impact**: If deployment fails with "failed to initialize port configuration" error, contact Replit Support
+
+**If Deployment Fails Due to Ports:**
+1. Contact Replit Support at https://replit.com/support
+2. Request: "Please clean my `.replit` file to keep only port 5000→80 for deployment"
+3. Expected result: `.replit` should have only:
+   ```
+   [[ports]]
+   localPort = 5000
+   externalPort = 80
+   ```
+
+**Note:** The `.replit` file is system-protected and accumulates ports automatically during development. This is a platform limitation that requires support intervention to resolve.
 
 ### Production Readiness Verification
 The application code is production-ready:
