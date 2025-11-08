@@ -45,8 +45,14 @@ export default function Messages() {
   const [messageContent, setMessageContent] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<number | null>(null);
+  const recordingRecipientRef = useRef<string | null>(null);
 
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/messages/conversations"],
@@ -115,6 +121,21 @@ export default function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Cleanup recording resources on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        if (mediaRecorderRef.current.stream) {
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+      }
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -168,6 +189,70 @@ export default function Messages() {
         recipientId: selectedUser.id,
         content: messageContent.trim(),
       });
+    }
+  };
+
+  const startRecording = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      // Store current recipient to prevent misrouting if user switches conversations
+      recordingRecipientRef.current = selectedUser.id;
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `audio-${Date.now()}.webm`, { type: 'audio/webm' });
+        
+        // Send the audio to the originally selected recipient
+        if (recordingRecipientRef.current) {
+          const formData = new FormData();
+          formData.append("media", audioFile);
+          formData.append("recipientId", recordingRecipientRef.current);
+          sendMediaMutation.mutate(formData);
+        }
+
+        // Clean up
+        stream.getTracks().forEach(track => track.stop());
+        setRecordingTime(0);
+        recordingRecipientRef.current = null;
+        if (recordingIntervalRef.current) {
+          clearInterval(recordingIntervalRef.current);
+          recordingIntervalRef.current = null;
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+
+      // Start timer
+      recordingIntervalRef.current = window.setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'accéder au microphone",
+        variant: "destructive",
+      });
+      recordingRecipientRef.current = null;
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
   };
 
@@ -374,6 +459,18 @@ export default function Messages() {
                   </div>
                 )}
 
+                {/* Recording Indicator */}
+                {isRecording && (
+                  <div className="mb-3 p-3 bg-destructive/10 border border-destructive rounded-lg flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-destructive rounded-full animate-pulse" />
+                      <span className="text-sm font-medium text-destructive">
+                        Enregistrement... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <input
                     ref={fileInputRef}
@@ -388,21 +485,32 @@ export default function Messages() {
                     variant="outline"
                     size="icon"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={sendMediaMutation.isPending}
+                    disabled={sendMediaMutation.isPending || isRecording}
                     data-testid="button-attach-media"
                   >
                     <Paperclip className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={isRecording ? "destructive" : "outline"}
+                    size="icon"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={sendMediaMutation.isPending || !!selectedFile}
+                    data-testid="button-record-audio"
+                  >
+                    <Mic className="w-4 h-4" />
                   </Button>
                   <Input
                     value={messageContent}
                     onChange={(e) => setMessageContent(e.target.value)}
                     placeholder="Tapez votre message..."
                     className="flex-1"
+                    disabled={isRecording}
                     data-testid="input-message"
                   />
                   <Button
                     type="submit"
-                    disabled={(!messageContent.trim() && !selectedFile) || sendMessageMutation.isPending || sendMediaMutation.isPending}
+                    disabled={(!messageContent.trim() && !selectedFile) || sendMessageMutation.isPending || sendMediaMutation.isPending || isRecording}
                     data-testid="button-send-message"
                   >
                     <Send className="w-4 h-4" />
