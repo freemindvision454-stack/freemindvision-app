@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { Share2 } from "lucide-react";
 
 interface ShareModalProps {
   open: boolean;
@@ -173,5 +174,3 @@ export function ShareModal({ open, onOpenChange, videoUrl, videoTitle, videoCrea
     </Dialog>
   );
 }
-
-import { Share2 } from "lucide-react";

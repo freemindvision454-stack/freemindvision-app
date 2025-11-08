@@ -231,6 +231,24 @@ export async function registerRoutes(app: Express): Promise<Express> {
     try {
       const userId = req.user.claims.sub;
       const like = await storage.likeVideo(userId, req.params.videoId);
+      
+      // Create notification for video creator
+      const video = await storage.getVideo(req.params.videoId);
+      if (video && video.creatorId !== userId) {
+        const actor = await storage.getUser(userId);
+        const actorName = actor?.firstName && actor?.lastName 
+          ? `${actor.firstName} ${actor.lastName}`
+          : actor?.email?.split("@")[0] || "Someone";
+        
+        await storage.createNotification({
+          userId: video.creatorId,
+          type: "like",
+          actorId: userId,
+          videoId: video.id,
+          message: `${actorName} a aimé votre vidéo "${video.title}"`,
+        });
+      }
+      
       res.json(like);
     } catch (error) {
       console.error("Error liking video:", error);
@@ -250,6 +268,55 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
+  // ===== NOTIFICATION ROUTES =====
+
+  // Get notifications for current user
+  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const notifications = await storage.getNotifications(userId, 50);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  // Get unread notifications count
+  app.get("/api/notifications/unread/count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadNotificationsCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error counting unread notifications:", error);
+      res.status(500).json({ message: "Failed to count unread notifications" });
+    }
+  });
+
+  // Mark notification as read
+  app.patch("/api/notifications/:notificationId/read", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.markNotificationAsRead(req.params.notificationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Mark all notifications as read
+  app.patch("/api/notifications/read-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.markAllNotificationsAsRead(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
   // ===== FOLLOW ROUTES =====
 
   // Follow a user
@@ -263,6 +330,20 @@ export async function registerRoutes(app: Express): Promise<Express> {
       }
 
       await storage.followUser(followerId, followingId);
+      
+      // Create notification for followed user
+      const actor = await storage.getUser(followerId);
+      const actorName = actor?.firstName && actor?.lastName 
+        ? `${actor.firstName} ${actor.lastName}`
+        : actor?.email?.split("@")[0] || "Someone";
+      
+      await storage.createNotification({
+        userId: followingId,
+        type: "follow",
+        actorId: followerId,
+        message: `${actorName} a commencé à vous suivre`,
+      });
+      
       res.json({ success: true });
     } catch (error) {
       console.error("Error following user:", error);
@@ -338,6 +419,25 @@ export async function registerRoutes(app: Express): Promise<Express> {
         userId,
         content: req.body.content,
       });
+      
+      // Create notification for video creator
+      const video = await storage.getVideo(req.body.videoId);
+      if (video && video.creatorId !== userId) {
+        const actor = await storage.getUser(userId);
+        const actorName = actor?.firstName && actor?.lastName 
+          ? `${actor.firstName} ${actor.lastName}`
+          : actor?.email?.split("@")[0] || "Someone";
+        
+        await storage.createNotification({
+          userId: video.creatorId,
+          type: "comment",
+          actorId: userId,
+          videoId: video.id,
+          commentId: comment.id,
+          message: `${actorName} a commenté votre vidéo "${video.title}"`,
+        });
+      }
+      
       res.json(comment);
     } catch (error) {
       console.error("Error creating comment:", error);
@@ -353,6 +453,74 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("Error fetching comments:", error);
       res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  // ===== MESSAGE ROUTES =====
+
+  // Send a message
+  app.post("/api/messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const senderId = req.user.claims.sub;
+      const message = await storage.sendMessage({
+        senderId,
+        recipientId: req.body.recipientId,
+        content: req.body.content,
+      });
+      res.json(message);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Get conversations
+  app.get("/api/messages/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const conversations = await storage.getConversations(userId);
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+
+  // Get messages with a specific user
+  app.get("/api/messages/:otherUserId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const otherUserId = req.params.otherUserId;
+      const messages = await storage.getMessages(userId, otherUserId, 50);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Mark messages as read
+  app.patch("/api/messages/:senderId/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const recipientId = req.user.claims.sub;
+      const senderId = req.params.senderId;
+      await storage.markMessagesAsRead(recipientId, senderId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+      res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+
+  // Get unread messages count
+  app.get("/api/messages/unread/count", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const count = await storage.getUnreadMessagesCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error counting unread messages:", error);
+      res.status(500).json({ message: "Failed to count unread messages" });
     }
   });
 

@@ -108,6 +108,52 @@ export const follows = pgTable("follows", {
 
 export type Follow = typeof follows.$inferSelect;
 
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 50 }).notNull(), // 'like', 'comment', 'follow', 'gift'
+  actorId: varchar("actor_id").references(() => users.id, { onDelete: "cascade" }), // User who triggered the notification
+  videoId: varchar("video_id").references(() => videos.id, { onDelete: "cascade" }), // Related video (for likes/comments)
+  commentId: varchar("comment_id").references(() => comments.id, { onDelete: "cascade" }), // Related comment
+  message: text("message").notNull(), // Notification message
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("notifications_user_idx").on(table.userId),
+  index("notifications_created_at_idx").on(table.createdAt),
+]);
+
+export type Notification = typeof notifications.$inferSelect;
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  isRead: true,
+  createdAt: true,
+});
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// Messages table (private messages between users)
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  recipientId: varchar("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("messages_sender_idx").on(table.senderId),
+  index("messages_recipient_idx").on(table.recipientId),
+  index("messages_created_at_idx").on(table.createdAt),
+]);
+
+export type Message = typeof messages.$inferSelect;
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  isRead: true,
+  createdAt: true,
+});
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
 // Gift types (predefined virtual gifts)
 export const giftTypes = pgTable("gift_types", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

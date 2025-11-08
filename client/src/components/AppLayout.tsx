@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings, Search } from "lucide-react";
+import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings, Search, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import logoUrl from "@assets/1762348677561_1762361963790.jpg";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -78,6 +79,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   {(user?.creditBalance || 0).toLocaleString()}
                 </span>
               </div>
+
+              <Link href="/analytics" data-testid="link-analytics">
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <TrendingUp className="w-5 h-5" />
+                </Button>
+              </Link>
+
+              <NotificationsDropdown />
 
               <Link href="/settings" data-testid="link-settings">
                 <Button variant="ghost" size="icon" className="rounded-full">

@@ -19,6 +19,7 @@ import Live from "@/pages/Live";
 import Messages from "@/pages/Messages";
 import Settings from "@/pages/Settings";
 import Search from "@/pages/Search";
+import Analytics from "@/pages/Analytics";
 import AppLayout from "@/components/AppLayout";
 
 function Router() {
@@ -69,6 +70,11 @@ function Router() {
       <Route path="/dashboard">
         <AppLayout>
           <Dashboard />
+        </AppLayout>
+      </Route>
+      <Route path="/analytics">
+        <AppLayout>
+          <Analytics />
         </AppLayout>
       </Route>
       <Route path="/profile/:userId">

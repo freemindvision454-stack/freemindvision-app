@@ -5,6 +5,8 @@ import {
   comments,
   likes,
   follows,
+  notifications,
+  messages,
   giftTypes,
   gifts,
   creditPackages,
@@ -17,6 +19,10 @@ import {
   type InsertComment,
   type Like,
   type Follow,
+  type Notification,
+  type InsertNotification,
+  type Message,
+  type InsertMessage,
   type Gift,
   type InsertGift,
   type GiftType,
@@ -75,6 +81,20 @@ export interface IStorage {
   // Dashboard operations
   getDashboardStats(userId: string): Promise<any>;
   getCreatorVideosWithStats(userId: string): Promise<any[]>;
+
+  // Notification operations
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotifications(userId: string, limit?: number): Promise<Notification[]>;
+  getUnreadNotificationsCount(userId: string): Promise<number>;
+  markNotificationAsRead(notificationId: string): Promise<void>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
+
+  // Message operations
+  sendMessage(message: InsertMessage): Promise<Message>;
+  getConversations(userId: string): Promise<any[]>;
+  getMessages(userId: string, otherUserId: string, limit?: number): Promise<Message[]>;
+  markMessagesAsRead(recipientId: string, senderId: string): Promise<void>;
+  getUnreadMessagesCount(userId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -422,6 +442,160 @@ export class DatabaseStorage implements IStorage {
     );
 
     return videosWithStats;
+  }
+
+  // Notification operations
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(notificationData)
+      .returning();
+    return notification;
+  }
+
+  async getNotifications(userId: string, limit: number = 50): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+  }
+
+  async getUnreadNotificationsCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ));
+    return result[0]?.count || 0;
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, notificationId));
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
+  }
+
+  // Message operations
+  async sendMessage(messageData: InsertMessage): Promise<Message> {
+    const [message] = await db
+      .insert(messages)
+      .values(messageData)
+      .returning();
+    return message;
+  }
+
+  async getConversations(userId: string): Promise<any[]> {
+    // Get all users this user has messaged with
+    const sent = await db
+      .select({ otherUserId: messages.recipientId })
+      .from(messages)
+      .where(eq(messages.senderId, userId))
+      .groupBy(messages.recipientId);
+
+    const received = await db
+      .select({ otherUserId: messages.senderId })
+      .from(messages)
+      .where(eq(messages.recipientId, userId))
+      .groupBy(messages.senderId);
+
+    const uniqueUserIds = Array.from(
+      new Set([...sent.map(s => s.otherUserId), ...received.map(r => r.otherUserId)])
+    );
+
+    // Get user details and last message for each conversation
+    const conversations = await Promise.all(
+      uniqueUserIds.map(async (otherUserId) => {
+        const user = await this.getUser(otherUserId);
+        
+        // Get last message
+        const lastMessages = await db
+          .select()
+          .from(messages)
+          .where(
+            or(
+              and(eq(messages.senderId, userId), eq(messages.recipientId, otherUserId)),
+              and(eq(messages.senderId, otherUserId), eq(messages.recipientId, userId))
+            )
+          )
+          .orderBy(desc(messages.createdAt))
+          .limit(1);
+
+        const unreadCount = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(messages)
+          .where(
+            and(
+              eq(messages.senderId, otherUserId),
+              eq(messages.recipientId, userId),
+              eq(messages.isRead, false)
+            )
+          );
+
+        return {
+          user,
+          lastMessage: lastMessages[0],
+          unreadCount: unreadCount[0]?.count || 0,
+        };
+      })
+    );
+
+    // Sort by last message time
+    return conversations.sort((a, b) => {
+      const timeA = a.lastMessage ? new Date(a.lastMessage.createdAt).getTime() : 0;
+      const timeB = b.lastMessage ? new Date(b.lastMessage.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }
+
+  async getMessages(userId: string, otherUserId: string, limit: number = 50): Promise<Message[]> {
+    return await db
+      .select()
+      .from(messages)
+      .where(
+        or(
+          and(eq(messages.senderId, userId), eq(messages.recipientId, otherUserId)),
+          and(eq(messages.senderId, otherUserId), eq(messages.recipientId, userId))
+        )
+      )
+      .orderBy(desc(messages.createdAt))
+      .limit(limit);
+  }
+
+  async markMessagesAsRead(recipientId: string, senderId: string): Promise<void> {
+    await db
+      .update(messages)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(messages.recipientId, recipientId),
+          eq(messages.senderId, senderId)
+        )
+      );
+  }
+
+  async getUnreadMessagesCount(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.recipientId, userId),
+          eq(messages.isRead, false)
+        )
+      );
+    return result[0]?.count || 0;
   }
 }
 

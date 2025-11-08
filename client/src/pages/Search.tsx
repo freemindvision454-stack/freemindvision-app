@@ -109,11 +109,15 @@ export default function Search() {
             </h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {searchResults.map((video) => (
-                <Link key={video.id} href="/">
+              {searchResults.map((video, index) => (
+                <Link 
+                  key={video.id} 
+                  href="/"
+                  data-testid={`link-video-${index}`}
+                >
                   <Card 
                     className="overflow-hidden hover-elevate active-elevate-2 cursor-pointer transition-all"
-                    data-testid={`video-card-${video.id}`}
+                    data-testid={`card-video-${index}`}
                   >
                     {/* Video Thumbnail */}
                     <div className="relative aspect-[9/16] bg-muted group">

@@ -1,84 +1,248 @@
-import AppLayout from "@/components/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Send, MessageCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Send, Bell, Shield } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
+
+interface Message {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+interface Conversation {
+  user: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    profileImageUrl: string | null;
+  };
+  lastMessage: Message | null;
+  unreadCount: number;
+}
 
 export default function Messages() {
+  const { user } = useAuth();
+  const [selectedUser, setSelectedUser] = useState<Conversation["user"] | null>(null);
+  const [messageContent, setMessageContent] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: conversations = [] } = useQuery<Conversation[]>({
+    queryKey: ["/api/messages/conversations"],
+    refetchInterval: 5000, // Refresh every 5 seconds
+  });
+
+  const { data: messages = [] } = useQuery<Message[]>({
+    queryKey: ["/api/messages", selectedUser?.id],
+    enabled: !!selectedUser,
+    refetchInterval: 3000, // Refresh every 3 seconds
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data: { recipientId: string; content: string }) => {
+      return await apiRequest("POST", "/api/messages", data);
+    },
+    onSuccess: () => {
+      setMessageContent("");
+      queryClient.invalidateQueries({ queryKey: ["/api/messages", selectedUser?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/conversations"] });
+    },
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (senderId: string) => {
+      return await apiRequest("PATCH", `/api/messages/${senderId}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/messages/conversations"] });
+    },
+  });
+
+  useEffect(() => {
+    if (selectedUser && messages.some(m => !m.isRead && m.recipientId === user?.id)) {
+      markAsReadMutation.mutate(selectedUser.id);
+    }
+  }, [messages, selectedUser, user]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageContent.trim() || !selectedUser) return;
+
+    sendMessageMutation.mutate({
+      recipientId: selectedUser.id,
+      content: messageContent.trim(),
+    });
+  };
+
+  const getUserDisplayName = (user: Conversation["user"]) => {
+    return user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user.email.split("@")[0];
+  };
+
+  const sortedMessages = [...messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
   return (
-    <AppLayout>
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-            <MessageCircle className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Coming Soon</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-poppins font-bold mb-4 bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
-            Direct Messages
-          </h1>
-          
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-            Connect with your fans and fellow creators through private messaging. Build relationships and collaborate.
-          </p>
-        </div>
+    <div className="container mx-auto p-4 h-[calc(100vh-80px)]">
+      <div className="flex items-center gap-3 mb-6">
+        <MessageCircle className="w-8 h-8 text-primary" />
+        <h1 className="text-3xl font-poppins font-bold" data-testid="heading-messages">
+          Messagerie
+        </h1>
+      </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          <Card className="hover-elevate transition-all">
-            <CardHeader>
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <MessageCircle className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Private Chats</CardTitle>
-              <CardDescription>
-                Send direct messages to other users with full privacy and encryption
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="hover-elevate transition-all">
-            <CardHeader>
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Bell className="w-4 h-4 text-primary" />
-              </div>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>
-                Get instant notifications when you receive new messages or replies
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="hover-elevate transition-all">
-            <CardHeader>
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-primary" />
-              </div>
-              <CardTitle>Spam Protection</CardTitle>
-              <CardDescription>
-                Advanced filters to protect you from spam and unwanted messages
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-
-        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-          <CardContent className="p-8 text-center">
-            <h3 className="text-2xl font-poppins font-bold mb-4">Phase 2 Feature</h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Direct messaging is currently in development and will be available in the next major update. 
-              You'll be able to chat with creators and fans securely.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" disabled>
-                <Send className="w-4 h-4 mr-2" />
-                Send Message
-              </Button>
-              <Button size="lg" variant="outline" disabled>
-                View Inbox
-              </Button>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100%-80px)]">
+        {/* Conversations List */}
+        <Card className="md:col-span-1" data-testid="card-conversations">
+          <CardHeader>
+            <CardTitle>Conversations</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              {conversations.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground" data-testid="text-no-conversations">
+                  Aucune conversation
+                </div>
+              ) : (
+                conversations.map((conversation, index) => (
+                  <div
+                    key={conversation.user.id}
+                    className={`p-4 cursor-pointer hover-elevate border-b ${
+                      selectedUser?.id === conversation.user.id ? "bg-primary/5" : ""
+                    }`}
+                    onClick={() => setSelectedUser(conversation.user)}
+                    data-testid={`item-conversation-${index}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={conversation.user.profileImageUrl || undefined} />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {getUserDisplayName(conversation.user)[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium truncate" data-testid={`text-conversation-name-${index}`}>
+                            {getUserDisplayName(conversation.user)}
+                          </p>
+                          {conversation.unreadCount > 0 && (
+                            <Badge variant="destructive" className="ml-2">
+                              {conversation.unreadCount}
+                            </Badge>
+                          )}
+                        </div>
+                        {conversation.lastMessage && (
+                          <p className="text-sm text-muted-foreground truncate">
+                            {conversation.lastMessage.content.substring(0, 30)}
+                            {conversation.lastMessage.content.length > 30 ? "..." : ""}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </ScrollArea>
           </CardContent>
         </Card>
+
+        {/* Chat Area */}
+        <Card className="md:col-span-2" data-testid="card-chat">
+          {!selectedUser ? (
+            <CardContent className="flex items-center justify-center h-full">
+              <div className="text-center text-muted-foreground" data-testid="text-select-conversation">
+                <MessageCircle className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p>Sélectionnez une conversation pour commencer</p>
+              </div>
+            </CardContent>
+          ) : (
+            <>
+              <CardHeader className="border-b">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={selectedUser.profileImageUrl || undefined} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {getUserDisplayName(selectedUser)[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <CardTitle data-testid="text-chat-with">
+                    {getUserDisplayName(selectedUser)}
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <ScrollArea className="h-[calc(100vh-420px)] p-4">
+                <div className="space-y-4">
+                  {sortedMessages.map((message, index) => {
+                    const isOwn = message.senderId === user?.id;
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                        data-testid={`item-message-${index}`}
+                      >
+                        <div
+                          className={`max-w-[70%] rounded-lg p-3 ${
+                            isOwn
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          }`}
+                        >
+                          <p className="text-sm" data-testid={`text-message-content-${index}`}>
+                            {message.content}
+                          </p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {formatDistanceToNow(new Date(message.createdAt), {
+                              addSuffix: true,
+                              locale: fr,
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+              <form onSubmit={handleSendMessage} className="border-t p-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={messageContent}
+                    onChange={(e) => setMessageContent(e.target.value)}
+                    placeholder="Tapez votre message..."
+                    className="flex-1"
+                    data-testid="input-message"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!messageContent.trim() || sendMessageMutation.isPending}
+                    data-testid="button-send-message"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </form>
+            </>
+          )}
+        </Card>
       </div>
-    </AppLayout>
+    </div>
   );
 }
