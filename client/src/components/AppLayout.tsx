@@ -1,4 +1,4 @@
-import { Link, useLocation, useRoute } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings, Search, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import logoUrl from "@assets/1762348677561_1762361963790.jpg";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
+import { TikTokSearchBar } from "@/components/TikTokSearchBar";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,7 +17,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [mobileSearchQuery, setMobileSearchQuery] = useState("");
 
   const displayName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
@@ -30,11 +31,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     { href: "/analytics", label: "Dashboard", icon: TrendingUp, testId: "nav-dashboard" },
   ];
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleMobileSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      setLocation(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
+    if (mobileSearchQuery.trim()) {
+      setLocation(`/search?q=${encodeURIComponent(mobileSearchQuery.trim())}`);
+      setMobileSearchQuery("");
     }
   };
 
@@ -57,20 +58,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </div>
               </div>
             </Link>
-
-            {/* Search Bar - Desktop */}
-            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher des vidéos..."
-                  className="pl-10 pr-4"
-                  data-testid="input-search-header"
-                />
-              </div>
-            </form>
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
@@ -97,6 +84,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
             {/* User Menu */}
             <div className="hidden md:flex items-center gap-2">
+              <TikTokSearchBar />
+
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
                 <Coins className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium text-primary" data-testid="text-user-credits">
@@ -144,12 +133,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
           {/* Search Bar - Mobile */}
           <div className="md:hidden pb-3">
-            <form onSubmit={handleSearch} className="w-full">
+            <form onSubmit={handleMobileSearch} className="w-full">
               <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={mobileSearchQuery}
+                  onChange={(e) => setMobileSearchQuery(e.target.value)}
                   placeholder="Rechercher des vidéos..."
                   className="pl-10 pr-4"
                   data-testid="input-search-header-mobile"
