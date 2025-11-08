@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { TrendingUp, DollarSign, Users, PieChart, ArrowUpRight, ArrowDownRight, Calendar } from "lucide-react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,127 +22,75 @@ interface ShareStats {
   totalInvestors: number;
 }
 
-function PurchaseForm({ currentPrice }: { currentPrice: number }) {
-  const [quantity, setQuantity] = useState(1);
+function PurchaseForm({ currentPrice, clientSecret }: { currentPrice: number; clientSecret: string }) {
   const { toast } = useToast();
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const totalAmount = quantity * currentPrice;
-
-  const purchaseMutation = useMutation({
-    mutationFn: async (qty: number) => {
-      const response: any = await apiRequest("POST", "/api/shares/purchase", { quantity: qty });
-      return response;
-    },
-    onSuccess: async (data: any) => {
-      if (!stripe || !elements) {
-        toast({
-          title: "Erreur",
-          description: "Le système de paiement n'est pas prêt",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsProcessing(true);
-
-      const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/shares?success=true`,
-        },
-      });
-
-      setIsProcessing(false);
-
-      if (error) {
-        toast({
-          title: "Erreur de paiement",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'acheter les actions",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (quantity < 1) {
+    
+    if (!stripe || !elements) {
       toast({
-        title: "Quantité invalide",
-        description: "Vous devez acheter au moins 1 action",
+        title: "Erreur",
+        description: "Le système de paiement n'est pas prêt",
         variant: "destructive",
       });
       return;
     }
-    purchaseMutation.mutate(quantity);
+
+    setIsProcessing(true);
+
+    const { error } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/shares?success=true`,
+      },
+    });
+
+    setIsProcessing(false);
+
+    if (error) {
+      toast({
+        title: "Erreur de paiement",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="quantity">Nombre d'actions</Label>
-        <Input
-          id="quantity"
-          type="number"
-          min="1"
-          value={quantity}
-          onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-          className="mt-2"
-          data-testid="input-share-quantity"
-        />
-        <p className="text-sm text-muted-foreground mt-2">
-          Prix par action : ${currentPrice.toFixed(2)}
-        </p>
-      </div>
-
-      <div className="p-4 rounded-lg bg-muted">
-        <div className="flex justify-between items-center">
-          <span className="font-medium">Total</span>
-          <span className="text-2xl font-bold text-primary">
-            ${totalAmount.toFixed(2)}
-          </span>
-        </div>
-      </div>
-
       <PaymentElement />
 
       <Button
         type="submit"
         className="w-full"
-        disabled={purchaseMutation.isPending || isProcessing || !stripe || !elements}
+        disabled={isProcessing || !stripe || !elements}
         data-testid="button-purchase-shares"
       >
-        {purchaseMutation.isPending || isProcessing ? "Traitement..." : `Acheter ${quantity} action${quantity > 1 ? 's' : ''}`}
+        {isProcessing ? "Traitement..." : "Confirmer le paiement"}
       </Button>
     </form>
   );
 }
 
-function PurchaseFormWrapper({ currentPrice, clientSecret }: { currentPrice: number; clientSecret: string | null }) {
-  if (!clientSecret) {
-    return <div className="text-center py-8 text-muted-foreground">Chargement du formulaire de paiement...</div>;
-  }
-
+function PurchaseFormWrapper({ currentPrice, clientSecret }: { currentPrice: number; clientSecret: string }) {
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <PurchaseForm currentPrice={currentPrice} />
+      <PurchaseForm currentPrice={currentPrice} clientSecret={clientSecret} />
     </Elements>
   );
 }
 
 export default function Shares() {
+  const [location, setLocation] = useLocation();
   const [showPurchaseForm, setShowPurchaseForm] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [isCreatingIntent, setIsCreatingIntent] = useState(false);
+  const { toast } = useToast();
 
   const { data: stats } = useQuery<ShareStats>({
     queryKey: ["/api/shares/stats"],
@@ -155,14 +104,57 @@ export default function Shares() {
     queryKey: ["/api/shares/price-history"],
   });
 
-  const currentPrice = stats?.currentPrice || 108;
+  // Handle successful payment redirect
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      toast({
+        title: "Paiement réussi !",
+        description: "Vos actions ont été achetées avec succès.",
+      });
+      // Reset form state
+      setShowPurchaseForm(false);
+      setClientSecret(null);
+      setQuantity(1);
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/shares/my-shares"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shares/stats"] });
+      // Clean up URL
+      setLocation('/shares');
+    }
+  }, [toast, setLocation]);
 
-  const handleStartPurchase = async () => {
+  const currentPrice = stats?.currentPrice || 108;
+  const totalAmount = quantity * currentPrice;
+
+  const handleStartPurchase = () => {
     setShowPurchaseForm(true);
-    // Initialize payment - we'll get clientSecret from the purchase mutation
-    const response: any = await apiRequest("POST", "/api/shares/purchase", { quantity: 1 });
-    if (response.clientSecret) {
-      setClientSecret(response.clientSecret);
+  };
+
+  const handleCreatePaymentIntent = async () => {
+    if (quantity < 1) {
+      toast({
+        title: "Quantité invalide",
+        description: "Vous devez acheter au moins 1 action",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreatingIntent(true);
+    try {
+      const response: any = await apiRequest("POST", "/api/shares/purchase", { quantity });
+      if (response.clientSecret) {
+        setClientSecret(response.clientSecret);
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer l'intention de paiement",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingIntent(false);
     }
   };
 
@@ -315,8 +307,56 @@ export default function Shares() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {showPurchaseForm ? (
+                {clientSecret ? (
                   <PurchaseFormWrapper currentPrice={currentPrice} clientSecret={clientSecret} />
+                ) : showPurchaseForm ? (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="text-5xl font-bold text-primary mb-2">
+                        ${currentPrice.toFixed(2)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">par action</p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="quantity">Nombre d'actions</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min="1"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                        className="mt-2"
+                        data-testid="input-share-quantity"
+                      />
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-muted">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-muted-foreground">Prix par action</span>
+                        <span className="font-medium">${currentPrice.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-muted-foreground">Quantité</span>
+                        <span className="font-medium">{quantity}</span>
+                      </div>
+                      <div className="border-t pt-2 mt-2 flex justify-between items-center">
+                        <span className="font-semibold">Total</span>
+                        <span className="text-2xl font-bold text-primary">
+                          ${totalAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleCreatePaymentIntent}
+                      className="w-full"
+                      disabled={isCreatingIntent}
+                      data-testid="button-proceed-to-payment"
+                    >
+                      {isCreatingIntent ? "Préparation..." : "Continuer vers le paiement"}
+                    </Button>
+                  </div>
                 ) : (
                   <div className="text-center py-8 space-y-4">
                     <div className="text-6xl font-bold text-primary mb-4">

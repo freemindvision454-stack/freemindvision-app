@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings, Search, TrendingUp } from "lucide-react";
+import { Home, Upload as UploadIcon, MessageCircle, Video, Menu, X, Coins, Settings, Search, TrendingUp, PieChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -86,12 +86,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <div className="hidden md:flex items-center gap-2">
               <TikTokSearchBar />
 
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                <Coins className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-primary" data-testid="text-user-credits">
-                  {(user?.creditBalance || 0).toLocaleString()}
-                </span>
-              </div>
+              <Link href="/shop" data-testid="link-credits">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover-elevate cursor-pointer">
+                  <Coins className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-primary" data-testid="text-user-credits">
+                    {(user?.creditBalance || 0).toLocaleString()}
+                  </span>
+                </div>
+              </Link>
+
+              <Link href="/shares" data-testid="link-shares">
+                <Button variant="ghost" size="icon" className="rounded-full" title="Actions FreeMind Vision">
+                  <PieChart className="w-5 h-5" />
+                </Button>
+              </Link>
 
               <NotificationsDropdown />
 
@@ -172,6 +180,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   </Link>
                 );
               })}
+
+              <Link href="/shares" data-testid="link-shares-mobile">
+                <div
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all hover-elevate cursor-pointer ${
+                    location === "/shares"
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <PieChart className="w-5 h-5" />
+                  <span>Actions</span>
+                </div>
+              </Link>
 
               <div className="pt-4 border-t space-y-3">
                 <div className="flex items-center gap-3 px-4">
