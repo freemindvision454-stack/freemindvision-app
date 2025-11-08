@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { User, Video } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { UserBadges } from "@/components/UserBadges";
 
 interface ProfileData {
   user: User;
@@ -214,6 +215,13 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Badges Section */}
+      {userId && (
+        <div className="max-w-5xl mx-auto px-4 py-8 border-b">
+          <UserBadges userId={userId} />
+        </div>
+      )}
 
       {/* Videos Grid */}
       <div className="max-w-5xl mx-auto px-4 py-8">

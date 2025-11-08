@@ -162,6 +162,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
           });
         }
 
+        // Check and award badges (async, don't wait)
+        storage.checkAndAwardBadges(userId).catch(err => 
+          console.error("Error checking badges after video upload:", err)
+        );
+
         res.json(video);
       } catch (error) {
         console.error("Error uploading video:", error);
@@ -1036,6 +1041,146 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
 
     res.json({ received: true });
+  });
+
+  // ===== REFERRAL ROUTES =====
+
+  // Get current user's referral code
+  app.get("/api/referral/code", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const code = await storage.getUserReferralCode(userId);
+      res.json({ code });
+    } catch (error) {
+      console.error("Error fetching referral code:", error);
+      res.status(500).json({ message: "Failed to fetch referral code" });
+    }
+  });
+
+  // Get referral stats for current user
+  app.get("/api/referral/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stats = await storage.getReferralStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching referral stats:", error);
+      res.status(500).json({ message: "Failed to fetch referral stats" });
+    }
+  });
+
+  // Get all referrals for current user
+  app.get("/api/referral/list", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const referrals = await storage.getReferralsByReferrer(userId);
+      res.json(referrals);
+    } catch (error) {
+      console.error("Error fetching referrals:", error);
+      res.status(500).json({ message: "Failed to fetch referrals" });
+    }
+  });
+
+  // Apply a referral code (use someone's code)
+  app.post("/api/referral/apply", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { referralCode } = req.body;
+
+      if (!referralCode) {
+        return res.status(400).json({ message: "Referral code is required" });
+      }
+
+      // Find the user who owns this referral code
+      const referrer = await db
+        .select()
+        .from(users)
+        .where(eq(users.referralCode, referralCode))
+        .limit(1);
+
+      if (referrer.length === 0) {
+        return res.status(404).json({ message: "Invalid referral code" });
+      }
+
+      const referrerId = referrer[0].id;
+
+      // Check if this user is trying to use their own code
+      if (referrerId === userId) {
+        return res.status(400).json({ message: "Cannot use your own referral code" });
+      }
+
+      // Check if user has already used a referral code
+      const existingReferral = await db
+        .select()
+        .from(referrals)
+        .where(eq(referrals.referredId, userId))
+        .limit(1);
+
+      if (existingReferral.length > 0) {
+        return res.status(400).json({ message: "You have already used a referral code" });
+      }
+
+      // Create the referral
+      const bonusAmount = 100; // 100 YimiCoins bonus
+      const referral = await storage.createReferral({
+        referrerId,
+        referredId: userId,
+        referralCode,
+        bonusAwarded: bonusAmount,
+        status: "completed",
+      });
+
+      // Award bonus to referrer
+      await storage.updateUserCredits(referrerId, bonusAmount);
+
+      // Create notification for referrer
+      await storage.createNotification({
+        userId: referrerId,
+        type: "referral",
+        message: `Félicitations ! Vous avez gagné ${bonusAmount} YimiCoins grâce à votre parrainage !`,
+      });
+
+      res.json({ success: true, referral });
+    } catch (error) {
+      console.error("Error applying referral code:", error);
+      res.status(500).json({ message: "Failed to apply referral code" });
+    }
+  });
+
+  // ===== BADGE ROUTES =====
+
+  // Get all badge types
+  app.get("/api/badges/types", async (req, res) => {
+    try {
+      const badgeTypes = await storage.getAllBadgeTypes();
+      res.json(badgeTypes);
+    } catch (error) {
+      console.error("Error fetching badge types:", error);
+      res.status(500).json({ message: "Failed to fetch badge types" });
+    }
+  });
+
+  // Get user badges
+  app.get("/api/users/:userId/badges", async (req, res) => {
+    try {
+      const badges = await storage.getUserBadges(req.params.userId);
+      res.json(badges);
+    } catch (error) {
+      console.error("Error fetching user badges:", error);
+      res.status(500).json({ message: "Failed to fetch user badges" });
+    }
+  });
+
+  // Check and award badges for current user
+  app.post("/api/badges/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const newBadges = await storage.checkAndAwardBadges(userId);
+      res.json({ newBadges, count: newBadges.length });
+    } catch (error) {
+      console.error("Error checking badges:", error);
+      res.status(500).json({ message: "Failed to check badges" });
+    }
   });
 
   return app;

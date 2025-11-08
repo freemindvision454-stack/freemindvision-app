@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   currency: varchar("currency").default("USD").notNull(), // Preferred currency (FCFA, USD, EUR, etc.)
   stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID for payments
   stripeConnectId: varchar("stripe_connect_id"), // Stripe Connect ID for creator payouts
+  referralCode: varchar("referral_code", { length: 20 }), // Unique referral code for this user (generated on first login)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -372,3 +373,58 @@ export const shareTransactionsRelations = relations(shareTransactions, ({ one })
     references: [users.id],
   }),
 }));
+
+// Badge Types - Predefined badges users can earn
+export const badgeTypes = pgTable("badge_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description").notNull(),
+  iconName: varchar("icon_name", { length: 50 }).notNull(), // Icon from lucide-react
+  color: varchar("color", { length: 50 }).notNull(), // Badge color
+  category: varchar("category", { length: 50 }).notNull(), // 'views', 'likes', 'followers', 'earnings', 'videos'
+  requirement: integer("requirement").notNull(), // Threshold to earn (e.g., 1000 views, 100 followers)
+  tier: varchar("tier", { length: 20 }).notNull(), // 'bronze', 'silver', 'gold', 'platinum', 'diamond'
+  order: integer("order").default(0).notNull(), // Display order
+});
+
+export type BadgeType = typeof badgeTypes.$inferSelect;
+
+// User Badges - Badges earned by users
+export const userBadges = pgTable("user_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  badgeTypeId: varchar("badge_type_id").notNull().references(() => badgeTypes.id, { onDelete: "cascade" }),
+  earnedAt: timestamp("earned_at").defaultNow().notNull(),
+}, (table) => [
+  index("user_badges_user_idx").on(table.userId),
+  index("user_badges_badge_type_idx").on(table.badgeTypeId),
+]);
+
+export type UserBadge = typeof userBadges.$inferSelect;
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
+  id: true,
+  earnedAt: true,
+});
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+
+// Referral System - Track who referred whom
+export const referrals = pgTable("referrals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: varchar("referrer_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who referred
+  referredId: varchar("referred_id").notNull().references(() => users.id, { onDelete: "cascade" }), // User who was referred
+  referralCode: varchar("referral_code", { length: 20 }).notNull(), // Code used
+  bonusAwarded: integer("bonus_awarded").default(0).notNull(), // Bonus YimiCoins awarded to referrer
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // 'pending', 'completed'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("referrals_referrer_idx").on(table.referrerId),
+  index("referrals_referred_idx").on(table.referredId),
+  index("referrals_code_idx").on(table.referralCode),
+]);
+
+export type Referral = typeof referrals.$inferSelect;
+export const insertReferralSchema = createInsertSchema(referrals).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertReferral = z.infer<typeof insertReferralSchema>;

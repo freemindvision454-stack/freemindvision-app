@@ -14,6 +14,9 @@ import {
   shares,
   shareTransactions,
   sharePriceHistory,
+  badgeTypes,
+  userBadges,
+  referrals,
   type User,
   type UpsertUser,
   type Video,
@@ -37,6 +40,11 @@ import {
   type ShareTransaction,
   type InsertShareTransaction,
   type SharePriceHistory,
+  type BadgeType,
+  type UserBadge,
+  type InsertUserBadge,
+  type Referral,
+  type InsertReferral,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, inArray } from "drizzle-orm";
@@ -114,6 +122,19 @@ export interface IStorage {
   getSharePriceHistory(limit?: number): Promise<SharePriceHistory[]>;
   getShareStats(): Promise<{ currentPrice: number; totalShares: number; platformValue: number; totalInvestors: number }>;
   getUserShareTransactions(userId: string): Promise<ShareTransaction[]>;
+
+  // Badge operations
+  getAllBadgeTypes(): Promise<BadgeType[]>;
+  getUserBadges(userId: string): Promise<(UserBadge & { badgeType: BadgeType })[]>;
+  awardBadge(userId: string, badgeTypeId: string): Promise<UserBadge>;
+  checkAndAwardBadges(userId: string): Promise<UserBadge[]>;
+  hasBadge(userId: string, badgeTypeId: string): Promise<boolean>;
+
+  // Referral operations
+  getUserReferralCode(userId: string): Promise<string>;
+  createReferral(referral: InsertReferral): Promise<Referral>;
+  getReferralsByReferrer(referrerId: string): Promise<Referral[]>;
+  getReferralStats(userId: string): Promise<{ totalReferrals: number; totalBonus: number; pendingReferrals: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -709,6 +730,172 @@ export class DatabaseStorage implements IStorage {
       .from(shareTransactions)
       .where(eq(shareTransactions.userId, userId))
       .orderBy(desc(shareTransactions.createdAt));
+  }
+
+  async getAllBadgeTypes(): Promise<BadgeType[]> {
+    return await db
+      .select()
+      .from(badgeTypes)
+      .orderBy(badgeTypes.order, badgeTypes.tier);
+  }
+
+  async getUserBadges(userId: string): Promise<(UserBadge & { badgeType: BadgeType })[]> {
+    const badges = await db
+      .select({
+        id: userBadges.id,
+        userId: userBadges.userId,
+        badgeTypeId: userBadges.badgeTypeId,
+        earnedAt: userBadges.earnedAt,
+        badgeType: badgeTypes,
+      })
+      .from(userBadges)
+      .innerJoin(badgeTypes, eq(userBadges.badgeTypeId, badgeTypes.id))
+      .where(eq(userBadges.userId, userId))
+      .orderBy(desc(userBadges.earnedAt));
+    
+    return badges as (UserBadge & { badgeType: BadgeType })[];
+  }
+
+  async awardBadge(userId: string, badgeTypeId: string): Promise<UserBadge> {
+    const existingBadge = await db
+      .select()
+      .from(userBadges)
+      .where(and(
+        eq(userBadges.userId, userId),
+        eq(userBadges.badgeTypeId, badgeTypeId)
+      ))
+      .limit(1);
+
+    if (existingBadge.length > 0) {
+      return existingBadge[0];
+    }
+
+    const [newBadge] = await db
+      .insert(userBadges)
+      .values({ userId, badgeTypeId })
+      .returning();
+    
+    return newBadge;
+  }
+
+  async hasBadge(userId: string, badgeTypeId: string): Promise<boolean> {
+    const badge = await db
+      .select()
+      .from(userBadges)
+      .where(and(
+        eq(userBadges.userId, userId),
+        eq(userBadges.badgeTypeId, badgeTypeId)
+      ))
+      .limit(1);
+    
+    return badge.length > 0;
+  }
+
+  async checkAndAwardBadges(userId: string): Promise<UserBadge[]> {
+    const newBadges: UserBadge[] = [];
+    
+    const stats = await this.getDashboardStats(userId);
+    const allBadgeTypes = await this.getAllBadgeTypes();
+    const followerCount = await this.getFollowerCount(userId);
+
+    for (const badgeType of allBadgeTypes) {
+      const alreadyHas = await this.hasBadge(userId, badgeType.id);
+      if (alreadyHas) continue;
+
+      let shouldAward = false;
+
+      switch (badgeType.category) {
+        case 'views':
+          shouldAward = stats.totalViews >= badgeType.requirement;
+          break;
+        case 'likes':
+          shouldAward = stats.totalLikes >= badgeType.requirement;
+          break;
+        case 'followers':
+          shouldAward = followerCount >= badgeType.requirement;
+          break;
+        case 'earnings':
+          shouldAward = stats.totalEarnings >= badgeType.requirement;
+          break;
+        case 'videos':
+          shouldAward = stats.totalVideos >= badgeType.requirement;
+          break;
+      }
+
+      if (shouldAward) {
+        const badge = await this.awardBadge(userId, badgeType.id);
+        newBadges.push(badge);
+        
+        await this.createNotification({
+          userId,
+          type: 'badge',
+          message: `Félicitations ! Vous avez obtenu le badge "${badgeType.name}"`,
+        });
+      }
+    }
+
+    return newBadges;
+  }
+
+  // Referral operations
+  async getUserReferralCode(userId: string): Promise<string> {
+    const user = await this.getUser(userId);
+    
+    if (user?.referralCode) {
+      return user.referralCode;
+    }
+
+    // Generate a new referral code
+    const code = this.generateReferralCode(user);
+    
+    // Update user with the new code
+    await db
+      .update(users)
+      .set({ referralCode: code })
+      .where(eq(users.id, userId));
+    
+    return code;
+  }
+
+  private generateReferralCode(user?: User): string {
+    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const namePart = user?.firstName?.substring(0, 3).toUpperCase() || "USR";
+    return `${namePart}${randomPart}`;
+  }
+
+  async createReferral(referralData: InsertReferral): Promise<Referral> {
+    const [referral] = await db
+      .insert(referrals)
+      .values(referralData)
+      .returning();
+    
+    return referral;
+  }
+
+  async getReferralsByReferrer(referrerId: string): Promise<Referral[]> {
+    return await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.referrerId, referrerId))
+      .orderBy(desc(referrals.createdAt));
+  }
+
+  async getReferralStats(userId: string): Promise<{
+    totalReferrals: number;
+    totalBonus: number;
+    pendingReferrals: number;
+  }> {
+    const userReferrals = await this.getReferralsByReferrer(userId);
+    
+    const totalReferrals = userReferrals.length;
+    const totalBonus = userReferrals.reduce((sum, ref) => sum + ref.bonusAwarded, 0);
+    const pendingReferrals = userReferrals.filter(ref => ref.status === "pending").length;
+    
+    return {
+      totalReferrals,
+      totalBonus,
+      pendingReferrals,
+    };
   }
 }
 
