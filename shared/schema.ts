@@ -138,7 +138,11 @@ export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   senderId: varchar("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   recipientId: varchar("recipient_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  content: text("content").notNull(),
+  content: text("content"), // Optional for media messages
+  messageType: varchar("message_type", { length: 20 }).default("text").notNull(), // 'text', 'image', 'video', 'audio'
+  mediaUrl: text("media_url"), // URL to image/video/audio file
+  mediaThumbnail: text("media_thumbnail"), // Thumbnail for video
+  mediaDuration: integer("media_duration"), // Duration in seconds for audio/video
   isRead: boolean("is_read").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [

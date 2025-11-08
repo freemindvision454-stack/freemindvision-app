@@ -7,6 +7,9 @@ import path from "path";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import Stripe from "stripe";
+import { db } from "./db";
+import { users, referrals } from "../shared/schema";
+import { eq } from "drizzle-orm";
 
 // Configure multer for file uploads
 const uploadStorage = multer.diskStorage({
@@ -38,6 +41,41 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error("Invalid file type"));
+    }
+  },
+});
+
+// Configure multer for message media uploads
+const messageMediaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./uploaded_messages");
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${randomUUID()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const uploadMessageMedia = multer({
+  storage: messageMediaStorage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for messages
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "video/mp4",
+      "video/webm",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/wav",
+      "audio/webm",
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid media type for messages"));
     }
   },
 });
@@ -83,6 +121,13 @@ export async function registerRoutes(app: Express): Promise<Express> {
     next();
   });
   app.use("/uploads", express.static("./uploaded_videos"));
+  
+  // Serve uploaded message media
+  app.use("/message-media", (req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    next();
+  });
+  app.use("/message-media", express.static("./uploaded_messages"));
 
   // ===== AUTH ROUTES =====
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -476,6 +521,45 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("Error sending message:", error);
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Upload media and send message
+  app.post("/api/messages/media", isAuthenticated, uploadMessageMedia.single("media"), async (req: any, res) => {
+    try {
+      const senderId = req.user.claims.sub;
+      const { recipientId, content, messageType } = req.body;
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No media file uploaded" });
+      }
+
+      const mediaUrl = `/message-media/${req.file.filename}`;
+      
+      // Determine message type from mime type if not provided
+      let finalMessageType = messageType;
+      if (!finalMessageType) {
+        if (req.file.mimetype.startsWith('image/')) {
+          finalMessageType = 'image';
+        } else if (req.file.mimetype.startsWith('video/')) {
+          finalMessageType = 'video';
+        } else if (req.file.mimetype.startsWith('audio/')) {
+          finalMessageType = 'audio';
+        }
+      }
+
+      const message = await storage.sendMessage({
+        senderId,
+        recipientId,
+        content: content || null,
+        messageType: finalMessageType,
+        mediaUrl,
+      });
+
+      res.json(message);
+    } catch (error) {
+      console.error("Error sending media message:", error);
+      res.status(500).json({ message: "Failed to send media message" });
     }
   });
 
