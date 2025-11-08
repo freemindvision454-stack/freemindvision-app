@@ -1,0 +1,58 @@
+=== COMMANDES À COPIER-COLLER DANS LE SHELL ===
+
+📋 IMPORTANT : Copiez et collez UNE SEULE commande à la fois !
+Après chaque commande, appuyez sur ENTRÉE (touche ↵)
+
+---
+
+COMMANDE 1/5 - Configuration de votre nom :
+git config user.email "freemindvision454@gmail.com"
+
+(Appuyez sur ENTRÉE après avoir collé cette commande)
+
+---
+
+COMMANDE 2/5 - Configuration de votre nom (suite) :
+git config user.name "FreeMind Vision"
+
+(Appuyez sur ENTRÉE)
+
+---
+
+COMMANDE 3/5 - Préparer tous les fichiers :
+git add .
+
+(Appuyez sur ENTRÉE)
+
+---
+
+COMMANDE 4/5 - Sauvegarder les changements :
+git commit -m "Application FreeMind Vision complete"
+
+(Appuyez sur ENTRÉE)
+
+---
+
+COMMANDE 5/5 - Connecter à votre repository GitHub :
+git remote add origin https://github.com/freemindvision454-stack/Ouedraogo-boureima-.git
+
+(Appuyez sur ENTRÉE)
+
+---
+
+COMMANDE 6/6 - POUSSER vers GitHub ! 🚀
+git push -u origin main
+
+(Appuyez sur ENTRÉE)
+
+Si ça demande un mot de passe ou token :
+- Ouvrez GitHub dans votre navigateur
+- Allez dans Settings → Developer Settings → Personal Access Tokens
+- Créez un nouveau token
+- Copiez-le et collez-le quand demandé
+
+---
+
+✅ TERMINÉ ! Votre code est sur GitHub !
+
+Vérifiez sur : https://github.com/freemindvision454-stack/Ouedraogo-boureima-
