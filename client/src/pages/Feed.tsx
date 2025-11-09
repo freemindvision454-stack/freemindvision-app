@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { Heart, MessageCircle, Share2, Gift, Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Heart, MessageCircle, Share2, Gift, Play, Pause, Volume2, VolumeX, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
@@ -9,15 +9,19 @@ import type { Video, User } from "@shared/schema";
 import { GiftModal } from "@/components/GiftModal";
 import { ShareModal } from "@/components/ShareModal";
 import { useAuth } from "@/hooks/useAuth";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface VideoWithCreator extends Video {
   creator: User;
   isLiked?: boolean;
+  isFavorited?: boolean;
   commentCount?: number;
 }
 
 export default function Feed() {
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
   const [feedType, setFeedType] = useState<"for-you" | "following">("for-you");
 
   const { data: forYouVideos, isLoading: forYouLoading } = useQuery<VideoWithCreator[]>({
@@ -75,9 +79,66 @@ export default function Feed() {
     });
   }, [currentIndex, isPlaying]);
 
+  // Like mutation
+  const likeMutation = useMutation({
+    mutationFn: async (videoId: string) => {
+      return await apiRequest("POST", `/api/videos/${videoId}/like`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos/following"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to like video",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Favorite mutation
+  const favoriteMutation = useMutation({
+    mutationFn: async (videoId: string) => {
+      return await apiRequest("POST", `/api/videos/${videoId}/favorite`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos/following"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to favorite video",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Share mutation
+  const shareMutation = useMutation({
+    mutationFn: async (videoId: string) => {
+      return await apiRequest("POST", `/api/videos/${videoId}/share`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/videos/following"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to share video",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleLike = async (videoId: string) => {
-    // Will implement in integration phase
-    console.log("Like video:", videoId);
+    likeMutation.mutate(videoId);
+  };
+
+  const handleFavorite = async (videoId: string) => {
+    favoriteMutation.mutate(videoId);
   };
 
   const handleComment = (videoId: string) => {
@@ -90,6 +151,8 @@ export default function Feed() {
     if (video) {
       setVideoToShare(video);
       setShowShareModal(true);
+      // Also increment share count on backend
+      shareMutation.mutate(videoId);
     }
   };
 
@@ -277,6 +340,21 @@ export default function Feed() {
                 </button>
 
                 <button
+                  onClick={() => handleFavorite(video.id)}
+                  className="flex flex-col items-center gap-1 hover-elevate active-elevate-2 p-2 rounded-lg transition-all"
+                  data-testid={`button-favorite-${video.id}`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <Star
+                      className={`w-6 h-6 ${video.isFavorited ? "fill-yellow-400 text-yellow-400" : "text-white"}`}
+                    />
+                  </div>
+                  <span className="text-xs text-white font-medium drop-shadow">
+                    {video.favorites.toLocaleString()}
+                  </span>
+                </button>
+
+                <button
                   onClick={() => handleShare(video.id)}
                   className="flex flex-col items-center gap-1 hover-elevate active-elevate-2 p-2 rounded-lg transition-all"
                   data-testid={`button-share-${video.id}`}
@@ -285,7 +363,7 @@ export default function Feed() {
                     <Share2 className="w-6 h-6 text-white" />
                   </div>
                   <span className="text-xs text-white font-medium drop-shadow">
-                    Share
+                    {video.shareCount.toLocaleString()}
                   </span>
                 </button>
 
