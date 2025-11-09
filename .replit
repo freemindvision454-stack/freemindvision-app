@@ -1,6 +1,7 @@
 
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
+modules = ["nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
@@ -16,6 +17,10 @@ NODE_ENV = "production"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 34603
+externalPort = 3000
 
 [env]
 PORT = "5000"
