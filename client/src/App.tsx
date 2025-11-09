@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Feed from "@/pages/Feed";
+import Explore from "@/pages/Explore";
+import Following from "@/pages/Following";
 import Upload from "@/pages/Upload";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/Profile";
@@ -42,6 +44,16 @@ function Router() {
       <Route path="/">
         <AppLayout>
           <Feed />
+        </AppLayout>
+      </Route>
+      <Route path="/explore">
+        <AppLayout>
+          <Explore />
+        </AppLayout>
+      </Route>
+      <Route path="/following">
+        <AppLayout>
+          <Following />
         </AppLayout>
       </Route>
       <Route path="/upload">

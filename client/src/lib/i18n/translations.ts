@@ -12,6 +12,10 @@ export interface Translations {
     shop: string;
     profile: string;
     logout: string;
+    explore: string;
+    following: string;
+    forYou: string;
+    friends: string;
   };
 
   // Landing page
@@ -190,6 +194,10 @@ export const translations: Record<Language, Translations> = {
       shop: "Boutique",
       profile: "Profil",
       logout: "Déconnexion",
+      explore: "Explorer",
+      following: "Suivis",
+      forYou: "Pour toi",
+      friends: "Amis",
     },
     landing: {
       tagline: "Plateforme mondiale pour créateurs",
@@ -354,6 +362,10 @@ export const translations: Record<Language, Translations> = {
       shop: "Shop",
       profile: "Profile",
       logout: "Logout",
+      explore: "Explore",
+      following: "Following",
+      forYou: "For You",
+      friends: "Friends",
     },
     landing: {
       tagline: "Global Creator Platform",
@@ -519,6 +531,10 @@ export const translations: Record<Language, Translations> = {
       shop: "Boutique",
       profile: "Profil",
       logout: "Génn",
+      explore: "Seetlu",
+      following: "Dafay topp",
+      forYou: "Bu la mëna",
+      friends: "Xamey",
     },
     landing: {
       tagline: "Plateforme bu créateurs ak àdduna",
@@ -684,6 +700,10 @@ export const translations: Record<Language, Translations> = {
       shop: "Dukanni",
       profile: "Profil",
       logout: "Bɔ",
+      explore: "Don",
+      following: "Kɛlɛ ka taa",
+      forYou: "Aw ye",
+      friends: "Tɛmɛnɛw",
     },
     landing: {
       tagline: "Duniɲa ka créateurs platform",
@@ -849,6 +869,10 @@ export const translations: Record<Language, Translations> = {
       shop: "Duka",
       profile: "Wasifu",
       logout: "Toka",
+      explore: "Gundua",
+      following: "Unawafuata",
+      forYou: "Kwa Ajili Yako",
+      friends: "Marafiki",
     },
     landing: {
       tagline: "Jukwaa la Waundaji Ulimwenguni",
@@ -1014,6 +1038,10 @@ export const translations: Record<Language, Translations> = {
       shop: "المتجر",
       profile: "الملف الشخصي",
       logout: "تسجيل خروج",
+      explore: "استكشف",
+      following: "المتابَعون",
+      forYou: "لك أنت",
+      friends: "الأصدقاء",
     },
     landing: {
       tagline: "منصة المبدعين العالمية",
@@ -1179,6 +1207,10 @@ export const translations: Record<Language, Translations> = {
       shop: "Loja",
       profile: "Perfil",
       logout: "Sair",
+      explore: "Explorar",
+      following: "Seguindo",
+      forYou: "Para Você",
+      friends: "Amigos",
     },
     landing: {
       tagline: "Plataforma Global de Criadores",
