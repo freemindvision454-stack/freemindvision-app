@@ -73,7 +73,11 @@ The platform features a modern, vibrant, and responsive design, heavily inspired
   - **Notification System**: Automatic notifications to referrers when bonuses are awarded
 
 ### Core System Design
-- **Database**: **PostgreSQL** (Neon) is used for data persistence, managed by **Drizzle ORM**. The schema includes tables for users, videos, comments, likes, gift types, gifts, credit packages, transactions, shares, share transactions, share price history, notifications, badge types, user badges, referrals, and sessions.
+- **Database**: **PostgreSQL** managed by **Drizzle ORM** with intelligent driver selection:
+  - **Neon WebSocket driver** for Neon-hosted databases (neon.tech/neon.database domains)
+  - **Standard PostgreSQL driver (pg)** for Render and other providers
+  - Auto-detection based on DATABASE_URL, supports SSL in production
+  - Database schema includes: users, videos, comments, likes, gift types, gifts, credit packages, transactions, shares, share transactions, share price history, notifications, badge types, user badges, referrals, and sessions
 - **Revenue Model**: Creators receive 60% of the value of gifts received (converted to USD), with the platform retaining 40%.
 - **Equity Model**: Platform shares are sold at $108 each with a total platform valuation of $1,080,000 (10,000 shares). Share price history is tracked for investor transparency.
 - **Project Structure**: Organized into `client/` (React frontend), `server/` (Express backend), and `shared/` (shared types and Drizzle schema).
@@ -111,7 +115,19 @@ Comprehensive API endpoints are provided for:
 
 **DEPLOYMENT STATUS: READY ✅**
 
-**Latest Fixes (Nov 9, 2024 - 7:17 AM):**
+**Latest Fixes (Nov 9, 2024 - 9:00 PM):**
+- ✅ **DATABASE DRIVER FIX**: Fixed Render deployment by adding intelligent database driver selection
+  - Problem: Neon WebSocket driver cannot connect to Render's TCP PostgreSQL
+  - Solution: Auto-detect database provider and use appropriate driver (Neon WebSocket for Neon, standard pg for Render)
+  - Impact: `/api/videos` and all database routes now work correctly on Render
+- ✅ **CONDITIONAL AUTHENTICATION**: Made Replit Auth optional for external deployments
+  - `isReplitAuthEnabled()` checks for REPL_ID environment variable
+  - Guest mode allows public routes to work without authentication
+  - Protected routes return clear 401 messages in guest mode
+- ✅ Installed `pg` and `@types/pg` packages for standard PostgreSQL support
+- ✅ Added connection diagnostics and error logging to database layer
+
+**Previous Fixes (Nov 9, 2024 - 7:17 AM):**
 - ✅ **ROOT CAUSE IDENTIFIED**: `npm run start` script doesn't reliably set NODE_ENV on deployment platforms
 - ✅ **SOLUTION**: Created `start-production.sh` wrapper script that guarantees NODE_ENV=production
 - ✅ Tested production startup: Server starts correctly with wrapper script

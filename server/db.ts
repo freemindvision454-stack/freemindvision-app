@@ -1,4 +1,9 @@
 // Database connection setup - supports both Neon WebSocket and standard PostgreSQL
+import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
+import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
+import { Pool as PgPool } from 'pg';
+import { drizzle as pgDrizzle } from 'drizzle-orm/node-postgres';
+import ws from 'ws';
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
@@ -16,20 +21,14 @@ let db: any;
 
 if (isNeonDatabase) {
   // Use Neon serverless driver for Neon databases
-  const { Pool: NeonPool, neonConfig } = await import('@neondatabase/serverless');
-  const ws = await import('ws');
-  neonConfig.webSocketConstructor = ws.default;
+  neonConfig.webSocketConstructor = ws;
   
   pool = new NeonPool({ connectionString: process.env.DATABASE_URL });
-  const { drizzle: neonDrizzle } = await import('drizzle-orm/neon-serverless');
   db = neonDrizzle({ client: pool, schema });
   
   console.log('[DATABASE] Using Neon WebSocket driver');
 } else {
   // Use standard PostgreSQL driver for Render and other providers
-  const { Pool: PgPool } = await import('pg');
-  const { drizzle: pgDrizzle } = await import('drizzle-orm/node-postgres');
-  
   pool = new PgPool({ 
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
