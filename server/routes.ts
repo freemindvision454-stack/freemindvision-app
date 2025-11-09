@@ -319,6 +319,95 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
+  // ===== FAVORITE ROUTES (TikTok-style bookmarks) =====
+
+  // Favorite a video (bookmark/save)
+  app.post("/api/videos/:videoId/favorite", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const video = await storage.getVideo(req.params.videoId);
+      
+      if (!video) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+
+      // Check if already favorited to avoid duplicate notifications
+      const alreadyFavorited = await storage.isVideoFavorited(userId, req.params.videoId);
+      
+      const favorite = await storage.favoriteVideo(userId, req.params.videoId);
+      
+      // Create notification only for NEW favorites (skip if self-favorite or already favorited)
+      if (!alreadyFavorited && video.creatorId !== userId) {
+        const actor = await storage.getUser(userId);
+        const actorName = actor?.firstName && actor?.lastName 
+          ? `${actor.firstName} ${actor.lastName}`
+          : actor?.email?.split("@")[0] || "Someone";
+        
+        await storage.createNotification({
+          userId: video.creatorId,
+          type: "favorite",
+          actorId: userId,
+          videoId: video.id,
+          message: `${actorName} a ajouté votre vidéo "${video.title}" aux favoris`,
+        });
+      }
+      
+      res.json({ favorited: true, favorite });
+    } catch (error) {
+      console.error("Error favoriting video:", error);
+      res.status(500).json({ message: "Failed to favorite video" });
+    }
+  });
+
+  // Unfavorite a video
+  app.delete("/api/videos/:videoId/favorite", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.unfavoriteVideo(userId, req.params.videoId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error unfavoriting video:", error);
+      res.status(500).json({ message: "Failed to unfavorite video" });
+    }
+  });
+
+  // Check if video is favorited by current user
+  app.get("/api/videos/:videoId/favorite/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const favorited = await storage.isVideoFavorited(userId, req.params.videoId);
+      res.json({ favorited });
+    } catch (error) {
+      console.error("Error checking favorite status:", error);
+      res.status(500).json({ message: "Failed to check favorite status" });
+    }
+  });
+
+  // ===== VIDEO SHARE ROUTES (tracking) =====
+
+  // Track video share event
+  app.post("/api/videos/:videoId/share", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const video = await storage.getVideo(req.params.videoId);
+      
+      if (!video) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+
+      const shareMethod = req.body.method || "direct"; // 'copy_link', 'native_share', 'twitter', etc.
+      const share = await storage.shareVideo(userId, req.params.videoId, shareMethod);
+      const shareCount = await storage.getShareCount(req.params.videoId);
+      
+      // No notification for shares (too frequent)
+      
+      res.json({ success: true, shareCount, share });
+    } catch (error) {
+      console.error("Error tracking video share:", error);
+      res.status(500).json({ message: "Failed to track video share" });
+    }
+  });
+
   // ===== NOTIFICATION ROUTES =====
 
   // Get notifications for current user

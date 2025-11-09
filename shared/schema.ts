@@ -10,6 +10,7 @@ import {
   varchar,
   boolean,
   real,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -58,6 +59,8 @@ export const videos = pgTable("videos", {
   duration: integer("duration"), // Duration in seconds
   views: integer("views").default(0).notNull(),
   likes: integer("likes").default(0).notNull(),
+  favorites: integer("favorites").default(0).notNull(), // Bookmark/save count
+  shareCount: integer("share_count").default(0).notNull(), // Share count
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -66,6 +69,8 @@ export const insertVideoSchema = createInsertSchema(videos).omit({
   id: true,
   views: true,
   likes: true,
+  favorites: true,
+  shareCount: true,
   createdAt: true,
 });
 export type InsertVideo = z.infer<typeof insertVideoSchema>;
@@ -92,9 +97,41 @@ export const likes = pgTable("likes", {
   videoId: varchar("video_id").notNull().references(() => videos.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("likes_video_idx").on(table.videoId),
+  index("likes_user_idx").on(table.userId),
+  uniqueIndex("likes_user_video_unique_idx").on(table.userId, table.videoId),
+]);
 
 export type Like = typeof likes.$inferSelect;
+
+// Favorites table (bookmarks) - TikTok-style save for later
+export const favorites = pgTable("favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoId: varchar("video_id").notNull().references(() => videos.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("favorites_video_idx").on(table.videoId),
+  index("favorites_user_idx").on(table.userId),
+  uniqueIndex("favorites_user_video_unique_idx").on(table.userId, table.videoId),
+]);
+
+export type Favorite = typeof favorites.$inferSelect;
+
+// Video Shares table - Track when users share videos
+export const videoShares = pgTable("video_shares", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoId: varchar("video_id").notNull().references(() => videos.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  shareMethod: varchar("share_method", { length: 50 }), // 'copy_link', 'native_share', 'twitter', 'facebook', etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("video_shares_video_idx").on(table.videoId),
+  index("video_shares_user_idx").on(table.userId),
+]);
+
+export type VideoShare = typeof videoShares.$inferSelect;
 
 // Follows table (follower/following relationships)
 export const follows = pgTable("follows", {
@@ -227,6 +264,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   videos: many(videos),
   comments: many(comments),
   likes: many(likes),
+  favorites: many(favorites),
+  videoShares: many(videoShares),
   sentGifts: many(gifts, { relationName: "sender" }),
   receivedGifts: many(gifts, { relationName: "recipient" }),
   transactions: many(transactions),
@@ -241,6 +280,8 @@ export const videosRelations = relations(videos, ({ one, many }) => ({
   }),
   comments: many(comments),
   likes: many(likes),
+  favorites: many(favorites),
+  shares: many(videoShares),
   gifts: many(gifts),
 }));
 
@@ -262,6 +303,28 @@ export const likesRelations = relations(likes, ({ one }) => ({
   }),
   user: one(users, {
     fields: [likes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  video: one(videos, {
+    fields: [favorites.videoId],
+    references: [videos.id],
+  }),
+  user: one(users, {
+    fields: [favorites.userId],
+    references: [users.id],
+  }),
+}));
+
+export const videoSharesRelations = relations(videoShares, ({ one }) => ({
+  video: one(videos, {
+    fields: [videoShares.videoId],
+    references: [videos.id],
+  }),
+  user: one(users, {
+    fields: [videoShares.userId],
     references: [users.id],
   }),
 }));

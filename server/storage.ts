@@ -4,6 +4,8 @@ import {
   videos,
   comments,
   likes,
+  favorites,
+  videoShares,
   follows,
   notifications,
   messages,
@@ -24,6 +26,8 @@ import {
   type Comment,
   type InsertComment,
   type Like,
+  type Favorite,
+  type VideoShare,
   type Follow,
   type Notification,
   type InsertNotification,
@@ -70,6 +74,16 @@ export interface IStorage {
   likeVideo(userId: string, videoId: string): Promise<Like>;
   unlikeVideo(userId: string, videoId: string): Promise<void>;
   isVideoLiked(userId: string, videoId: string): Promise<boolean>;
+
+  // Favorite operations (TikTok-style bookmarks)
+  favoriteVideo(userId: string, videoId: string): Promise<Favorite>;
+  unfavoriteVideo(userId: string, videoId: string): Promise<void>;
+  isVideoFavorited(userId: string, videoId: string): Promise<boolean>;
+  getFavoritesByUser(userId: string): Promise<Video[]>;
+
+  // Video share operations (tracking)
+  shareVideo(userId: string, videoId: string, shareMethod?: string): Promise<VideoShare>;
+  getShareCount(videoId: string): Promise<number>;
 
   // Follow operations
   followUser(followerId: string, followingId: string): Promise<Follow>;
@@ -242,15 +256,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async unlikeVideo(userId: string, videoId: string): Promise<void> {
-    await db
+    // Delete and check if anything was actually removed
+    const deleted = await db
       .delete(likes)
-      .where(and(eq(likes.userId, userId), eq(likes.videoId, videoId)));
+      .where(and(eq(likes.userId, userId), eq(likes.videoId, videoId)))
+      .returning();
 
-    // Decrement video likes count
-    await db
-      .update(videos)
-      .set({ likes: sql`${videos.likes} - 1` })
-      .where(eq(videos.id, videoId));
+    // Only decrement if a like was actually removed
+    if (deleted.length > 0) {
+      await db
+        .update(videos)
+        .set({ likes: sql`GREATEST(${videos.likes} - 1, 0)` })
+        .where(eq(videos.id, videoId));
+    }
   }
 
   async isVideoLiked(userId: string, videoId: string): Promise<boolean> {
@@ -261,6 +279,108 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
 
     return result.length > 0;
+  }
+
+  // Favorite operations (TikTok-style bookmarks)
+  async favoriteVideo(userId: string, videoId: string): Promise<Favorite> {
+    // Check if already favorited (idempotent)
+    const existing = await db
+      .select()
+      .from(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.videoId, videoId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    // Create new favorite
+    const [favorite] = await db.insert(favorites).values({ userId, videoId }).returning();
+
+    // Increment video favorites count
+    await db
+      .update(videos)
+      .set({ favorites: sql`${videos.favorites} + 1` })
+      .where(eq(videos.id, videoId));
+
+    return favorite;
+  }
+
+  async unfavoriteVideo(userId: string, videoId: string): Promise<void> {
+    // Delete and check if anything was actually removed
+    const deleted = await db
+      .delete(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.videoId, videoId)))
+      .returning();
+
+    // Only decrement if a favorite was actually removed
+    if (deleted.length > 0) {
+      await db
+        .update(videos)
+        .set({ favorites: sql`GREATEST(${videos.favorites} - 1, 0)` })
+        .where(eq(videos.id, videoId));
+    }
+  }
+
+  async isVideoFavorited(userId: string, videoId: string): Promise<boolean> {
+    const result = await db
+      .select()
+      .from(favorites)
+      .where(and(eq(favorites.userId, userId), eq(favorites.videoId, videoId)))
+      .limit(1);
+
+    return result.length > 0;
+  }
+
+  async getFavoritesByUser(userId: string): Promise<Video[]> {
+    // Join favorites with videos to get full video objects
+    const favoriteVideos = await db
+      .select({
+        id: videos.id,
+        creatorId: videos.creatorId,
+        title: videos.title,
+        description: videos.description,
+        videoUrl: videos.videoUrl,
+        thumbnailUrl: videos.thumbnailUrl,
+        duration: videos.duration,
+        views: videos.views,
+        likes: videos.likes,
+        favorites: videos.favorites,
+        shareCount: videos.shareCount,
+        createdAt: videos.createdAt,
+      })
+      .from(favorites)
+      .innerJoin(videos, eq(favorites.videoId, videos.id))
+      .where(eq(favorites.userId, userId))
+      .orderBy(desc(favorites.createdAt));
+
+    return favoriteVideos;
+  }
+
+  // Video share operations (tracking)
+  async shareVideo(userId: string, videoId: string, shareMethod: string = "direct"): Promise<VideoShare> {
+    // Create new share record (allows multiple shares per user)
+    const [share] = await db
+      .insert(videoShares)
+      .values({ userId, videoId, shareMethod })
+      .returning();
+
+    // Increment video share count
+    await db
+      .update(videos)
+      .set({ shareCount: sql`${videos.shareCount} + 1` })
+      .where(eq(videos.id, videoId));
+
+    return share;
+  }
+
+  async getShareCount(videoId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(videoShares)
+      .where(eq(videoShares.videoId, videoId));
+
+    return result[0]?.count || 0;
   }
 
   // Follow operations
