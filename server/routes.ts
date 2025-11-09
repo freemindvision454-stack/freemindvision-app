@@ -9,7 +9,7 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import Stripe from "stripe";
 import { db } from "./db";
-import { users, referrals } from "../shared/schema";
+import { users, referrals, userSubscriptions } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { getOnlineUsers, isUserOnline } from "./websocket";
 import passport from "passport";
@@ -1031,22 +1031,128 @@ export async function registerRoutes(app: Express): Promise<Express> {
     try {
       if (event.type === "payment_intent.succeeded") {
         const paymentIntent = event.data.object;
-        const { userId, credits } = paymentIntent.metadata;
+        const { userId, credits, type } = paymentIntent.metadata;
 
-        // Add credits to user account
-        await storage.updateUserCredits(userId, parseInt(credits));
-
-        // Update transaction status
-        await storage.updateTransactionStatus(paymentIntent.id, "completed");
-
-        console.log(`✅ Payment succeeded for user ${userId}: ${credits} YimiCoins`);
+        // Handle verified badge payment
+        if (type === "verified_badge") {
+          // Payment successful - now ready for manual admin approval
+          await storage.updateTransactionStatus(paymentIntent.id, "completed");
+          console.log(`✅ Verified badge payment succeeded for user ${userId} - Awaiting admin approval`);
+        } else if (credits) {
+          // Handle credit purchase
+          await storage.updateUserCredits(userId, parseInt(credits));
+          await storage.updateTransactionStatus(paymentIntent.id, "completed");
+          console.log(`✅ Payment succeeded for user ${userId}: ${credits} YimiCoins`);
+        } else {
+          // Handle any other payment types (gifts, etc.)
+          await storage.updateTransactionStatus(paymentIntent.id, "completed");
+          console.log(`✅ Payment succeeded: ${paymentIntent.id}`);
+        }
       } else if (event.type === "payment_intent.payment_failed") {
         const paymentIntent = event.data.object;
-        
-        // Update transaction status
         await storage.updateTransactionStatus(paymentIntent.id, "failed");
-
         console.log(`❌ Payment failed: ${paymentIntent.id}`);
+      } else if (event.type === "checkout.session.completed") {
+        const session = event.data.object;
+        const { userId, planId } = session.metadata || {};
+
+        if (userId && planId && session.mode === "subscription") {
+          // Subscription checkout completed - subscription will be created separately
+          console.log(`✅ Checkout completed for user ${userId}, plan ${planId}`);
+        }
+      } else if (event.type === "customer.subscription.created") {
+        if (!stripe) {
+          console.error("❌ Stripe not configured - cannot process subscription webhook");
+          return res.status(503).json({ message: "Stripe not configured" });
+        }
+
+        const subscription = event.data.object;
+        
+        try {
+          // Extract userId and planId from subscription metadata or customer metadata
+          const checkoutSession = await stripe.checkout.sessions.list({
+            subscription: subscription.id,
+            limit: 1,
+          });
+
+          if (checkoutSession.data.length > 0) {
+            const { userId, planId } = checkoutSession.data[0].metadata || {};
+            
+            if (userId && planId) {
+              await storage.createUserSubscription({
+                userId,
+                planId,
+                stripeSubscriptionId: subscription.id,
+                currentPeriodStart: new Date(subscription.current_period_start * 1000),
+                currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              });
+
+              console.log(`✅ Subscription created for user ${userId}`);
+            }
+          }
+        } catch (sessionErr: any) {
+          console.error("Error retrieving checkout session:", sessionErr);
+          // Don't fail webhook - subscription is still valid
+        }
+      } else if (event.type === "customer.subscription.updated") {
+        const subscription = event.data.object;
+        
+        await storage.updateSubscriptionStatus(
+          subscription.id,
+          subscription.status,
+          new Date(subscription.current_period_end * 1000)
+        );
+
+        console.log(`✅ Subscription ${subscription.id} updated to status: ${subscription.status}`);
+      } else if (event.type === "customer.subscription.deleted") {
+        const subscription = event.data.object;
+        
+        await storage.updateSubscriptionStatus(
+          subscription.id,
+          "canceled"
+        );
+
+        console.log(`✅ Subscription ${subscription.id} canceled`);
+      } else if (event.type === "invoice.payment_succeeded") {
+        if (!stripe) {
+          console.error("❌ Stripe not configured - cannot process invoice webhook");
+          return res.status(503).json({ message: "Stripe not configured" });
+        }
+
+        const invoice = event.data.object;
+        
+        if (invoice.subscription) {
+          try {
+            const subscriptionResponse = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            
+            // Update subscription period and record payment
+            await storage.updateSubscriptionStatus(
+              subscriptionResponse.id,
+              subscriptionResponse.status,
+              new Date(subscriptionResponse.current_period_end * 1000)
+            );
+
+            // Record subscription payment transaction
+            const userSub = await db
+              .select()
+              .from(userSubscriptions)
+              .where(eq(userSubscriptions.stripeSubscriptionId, subscriptionResponse.id))
+              .limit(1);
+
+            if (userSub.length > 0) {
+              await storage.recordSubscriptionPayment(
+                userSub[0].userId,
+                subscriptionResponse.id,
+                (invoice.amount_paid / 100).toString()
+              );
+            }
+
+            console.log(`✅ Subscription invoice paid: ${invoice.id}`);
+          } catch (subErr: any) {
+            console.error("Error retrieving subscription:", subErr);
+            // Don't fail webhook - invoice is still paid
+          }
+        }
       }
     } catch (err: any) {
       console.error("Error handling webhook event:", err);
@@ -1516,6 +1622,225 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("Error checking badges:", error);
       res.status(500).json({ message: "Failed to check badges" });
+    }
+  });
+
+  // ===== SUBSCRIPTION ROUTES =====
+
+  // Get all subscription plans
+  app.get("/api/subscriptions/plans", async (req, res) => {
+    try {
+      const plans = await storage.getSubscriptionPlans({ isActive: true });
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching subscription plans:", error);
+      res.status(500).json({ message: "Failed to fetch subscription plans" });
+    }
+  });
+
+  // Get user's active subscription
+  app.get("/api/subscriptions/current", requiresAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscription = await storage.getUserSubscription(userId);
+      res.json(subscription || null);
+    } catch (error) {
+      console.error("Error fetching user subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  // Create Stripe checkout session for subscription
+  app.post("/api/subscriptions/checkout", requiresAuth, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const userId = req.user.claims.sub;
+      const { planId } = req.body;
+
+      const plans = await storage.getSubscriptionPlans({ planId });
+      if (plans.length === 0) {
+        return res.status(404).json({ message: "Plan not found" });
+      }
+
+      const plan = plans[0];
+      if (!plan.stripePriceId) {
+        return res.status(500).json({ message: "Plan not configured for Stripe" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: plan.stripePriceId,
+            quantity: 1,
+          },
+        ],
+        customer_email: user.email || undefined,
+        metadata: {
+          userId,
+          planId,
+        },
+        success_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/dashboard?subscription=success`,
+        cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/subscriptions?subscription=cancelled`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error("Error creating subscription checkout:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Cancel subscription
+  app.post("/api/subscriptions/cancel", requiresAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.cancelSubscription(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error cancelling subscription:", error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+
+  // ===== VERIFIED BADGE ROUTES =====
+
+  // Get badge purchase status
+  app.get("/api/verified-badge/status", requiresAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const purchase = await storage.getBadgePurchase(userId);
+      res.json(purchase || null);
+    } catch (error) {
+      console.error("Error fetching badge status:", error);
+      res.status(500).json({ message: "Failed to fetch badge status" });
+    }
+  });
+
+  // Create verified badge purchase
+  app.post("/api/verified-badge/purchase", requiresAuth, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe not configured" });
+    }
+
+    try {
+      const userId = req.user.claims.sub;
+      const { submittedDocuments } = req.body;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if already verified or has pending purchase
+      if (user.isVerified) {
+        return res.status(400).json({ message: "Already verified" });
+      }
+
+      const existingPurchase = await storage.getBadgePurchase(userId);
+      if (existingPurchase && existingPurchase.status === "pending") {
+        return res.status(400).json({ message: "Purchase already pending" });
+      }
+
+      // Get authoritative pricing from server settings
+      const settings = await storage.getMonetizationSettings();
+      const priceUsd = settings.verifiedBadgePriceUsd;
+      const priceFcfa = settings.verifiedBadgePriceFcfa;
+
+      // Create Stripe payment intent with server-controlled amount
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(parseFloat(priceUsd) * 100),
+        currency: "usd",
+        metadata: { userId, type: "verified_badge" },
+        description: "Verified badge purchase",
+      });
+
+      // Create purchase record
+      const purchase = await storage.createBadgePurchase({
+        userId,
+        priceUsd,
+        priceFcfa,
+        submittedDocuments,
+        stripePaymentIntentId: paymentIntent.id,
+      });
+
+      res.json({ 
+        purchase,
+        clientSecret: paymentIntent.client_secret,
+      });
+    } catch (error) {
+      console.error("Error creating badge purchase:", error);
+      res.status(500).json({ message: "Failed to create badge purchase" });
+    }
+  });
+
+  // ===== VIEW EARNINGS ROUTES =====
+
+  // Get user's view earnings
+  app.get("/api/earnings/views", requiresAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const totalEarnings = await storage.getTotalViewEarnings(userId);
+      res.json({ totalEarnings });
+    } catch (error) {
+      console.error("Error fetching view earnings:", error);
+      res.status(500).json({ message: "Failed to fetch view earnings" });
+    }
+  });
+
+  // Get video view earnings
+  app.get("/api/earnings/videos/:videoId", requiresAuth, async (req: any, res) => {
+    try {
+      const { videoId } = req.params;
+      const earnings = await storage.getVideoViewEarnings(videoId);
+      res.json(earnings || null);
+    } catch (error) {
+      console.error("Error fetching video earnings:", error);
+      res.status(500).json({ message: "Failed to fetch video earnings" });
+    }
+  });
+
+  // ===== MONETIZATION SETTINGS ROUTES =====
+
+  // Get monetization settings (public)
+  app.get("/api/monetization/settings", async (req, res) => {
+    try {
+      const settings = await storage.getMonetizationSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching monetization settings:", error);
+      res.status(500).json({ message: "Failed to fetch monetization settings" });
+    }
+  });
+
+  // Check monetization eligibility
+  app.get("/api/monetization/eligibility", requiresAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const settings = await storage.getMonetizationSettings();
+      const followerCount = await storage.getFollowerCount(userId);
+
+      res.json({
+        isMonetized: user?.isMonetized || false,
+        isEligible: followerCount >= settings.minFollowersForMonetization,
+        followerCount,
+        requiredFollowers: settings.minFollowersForMonetization,
+        pricePerViewFcfa: settings.pricePerViewFcfa,
+        pricePerViewUsd: settings.pricePerViewUsd,
+      });
+    } catch (error) {
+      console.error("Error checking monetization eligibility:", error);
+      res.status(500).json({ message: "Failed to check eligibility" });
     }
   });
 
