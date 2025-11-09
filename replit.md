@@ -2,16 +2,16 @@
 
 ## Overview
 
-FreeMind Vision is a global creator platform, inspired by leading social media platforms, designed to empower creators worldwide. Its core mission is to provide an accessible platform for sharing video content, building audiences, and monetizing creativity, with a particular focus on creators in Africa and other international markets. The platform aims to facilitate self-expression, audience growth, and financial independence for creators through a robust video and monetization ecosystem.
+FreeMind Vision is a global creator platform designed to empower creators by providing an accessible platform for sharing video content, building audiences, and monetizing creativity. Inspired by leading social media platforms, it focuses on creators in Africa and other international markets, aiming to facilitate self-expression, audience growth, and financial independence through a robust video and monetization ecosystem.
 
 Key capabilities include:
 - Multi-provider authentication and user management.
-- A TikTok-style vertical video feed, content upload, and basic social interactions (likes, comments).
-- A unique monetization system featuring virtual currency (YimiCoins), virtual gifts, and a 60/40 revenue split model favoring creators.
-- A comprehensive creator dashboard for tracking earnings and video performance.
-- **Advanced Analytics Dashboard**: Multi-metric KPI tracking, engagement rate calculations, and interactive charts for creator insights.
-- **Badge & Achievement System**: 19 predefined badges across 4 tiers (Bronze, Silver, Gold, Platinum) with auto-award functionality.
-- **Referral Program**: Unique referral codes, 100 YimiCoins bonus rewards, and comprehensive tracking system.
+- A TikTok-style vertical video feed, content upload, and basic social interactions.
+- A unique monetization system with virtual currency (YimiCoins), virtual gifts, and a 60/40 revenue split favoring creators.
+- A comprehensive creator dashboard with advanced analytics, KPI tracking, and interactive charts.
+- A gamified Badge & Achievement System with 19 predefined badges across 4 tiers.
+- A Referral Program offering unique codes and bonus rewards.
+- A Share Purchase System allowing users to invest in the platform's equity.
 
 ## User Preferences
 
@@ -25,178 +25,36 @@ Key capabilities include:
 ## System Architecture
 
 ### UI/UX Decisions
-The platform features a modern, vibrant, and responsive design, heavily inspired by TikTok for an intuitive user experience. It utilizes **TailwindCSS** and **Shadcn UI** for component development, ensuring consistency and accessibility (WCAG AA contrast). Key design elements include a primary pink/magenta color palette, Inter and Poppins typography, and subtle hover animations. The interface is built with a mobile-first approach.
+The platform features a modern, vibrant, and responsive design, inspired by TikTok. It uses **TailwindCSS** and **Shadcn UI** for components, ensuring accessibility and consistency with a primary pink/magenta color palette. The design is mobile-first, utilizing Inter and Poppins typography.
 
 ### Technical Implementations
 - **Frontend**: Developed with **React** and **TypeScript**, using **Wouter** for routing, **TanStack Query** for data fetching, and **React Hook Form** with Zod for form validation.
 - **Backend**: Built on **Express.js** with **TypeScript**, utilizing **Drizzle ORM** for type-safe PostgreSQL interactions and **Multer** for file uploads. **Passport.js** manages session authentication.
-- **Authentication**: Integrates **Replit Auth** (OpenID Connect) for multi-provider login (Google, GitHub, Email).
-- **Video Platform**: Supports vertical video uploads with **TikTok-style effects**, a dynamic feed, and basic interaction tracking (views, likes, comments).
-  - **Upload Page Features**:
-    - **Real-time Video Preview**: Live preview with instant effect application
-    - **7 Video Filters**: None, Black & White, Sepia, Vintage, Bright, Contrast, Saturate
-    - **3 Speed Controls**: Normal (1.0x), Slow (0.5x), Fast (2.0x)
-    - **Music Section**: Placeholder for future music integration
-    - **FreeMind Vision Branding**: Logo with pink-violet gradient
-    - **Fully Localized**: All UI elements translated across 7 languages
-    - **Form Validation**: Character counters (title: 200 max, description: 500 max)
-    - **Accessibility**: Complete data-testid coverage for automated testing
-- **Monetization**: Implements a virtual currency (YimiCoins) system, credit packages, and virtual gifts with a 60/40 revenue split for creators. Earnings are displayed in multiple currencies.
-- **Internationalization (i18n)**: Supports 7 languages (French, English, Wolof, Bambara, Swahili, Arabic, Portuguese) using a React Context-based system with a `useTranslations()` hook and persistent language selection. Upload page fully translated with dynamic filter/speed labels.
-- **Payment Processing**: Integrated **Stripe** for credit/debit card payments, dedicated pages for various Mobile Money providers (Orange Money, MTN Money, Wave), and bank transfers. This includes webhook handling, customer management, and secure transaction processing.
-- **Social Features**: Includes a follow/unfollow system with a personalized "Following" feed and enhanced user profiles.
-- **Share Purchase System**: Platform stock/equity purchase system allowing users to invest in FreeMind Vision at $108 per share. Features include:
-  - **Purchase Flow**: Multi-step process with quantity selection → Stripe payment intent creation → secure payment confirmation
-  - **Portfolio Management**: Real-time tracking of shares owned, current value, profit/loss calculations, and transaction history
-  - **Platform Stats**: Display of current share price, total platform valuation, number of investors, and price history
-  - **Stripe Integration**: Full payment processing with webhook support for automatic share allocation upon successful payment
-  - **Database Schema**: Dedicated tables for shares, share transactions, and historical price tracking
-- **Search Interface**: TikTok-style expandable search bar in header that transitions from icon to full search input on click, with mobile-optimized version.
-- **Advanced Analytics System**: Enhanced creator dashboard featuring:
-  - **6 KPI Cards**: Total views, likes, engagement rate, average views per video, comments, and earnings
-  - **Interactive Charts**: Area chart for combined metrics evolution, detailed line charts for views and engagement tracking
-  - **Top Videos Table**: Performance rankings with engagement rate calculations
-  - **Real-time Metrics**: Live updates of creator performance statistics
-- **Badge & Achievement System**: Gamification layer to motivate creators with:
-  - **19 Predefined Badges**: Across 5 categories (views, likes, followers, videos, earnings)
-  - **4 Achievement Tiers**: Bronze, Silver, Gold, and Platinum milestones
-  - **Auto-Award Logic**: Automatic badge distribution after video uploads via `checkAndAwardBadges()`
-  - **Profile Integration**: Visual badge display on user profiles with earned/locked states
-  - **Progress Tracking**: Shows next badges to unlock with requirements
-- **Referral Program**: Viral growth system with financial incentives:
-  - **Unique Codes**: Auto-generated 9-character codes (format: USR + 6 alphanumeric)
-  - **Bonus Rewards**: 100 YimiCoins awarded to referrer upon successful referral
-  - **Anti-Fraud**: Prevents self-referrals and duplicate code usage
-  - **Stats Dashboard**: Total referrals, bonus earned, pending referrals tracking
-  - **Share Functionality**: Copy code/URL buttons and native Web Share API integration
-  - **Referral History**: Complete audit trail of all successful referrals
-  - **Notification System**: Automatic notifications to referrers when bonuses are awarded
+- **Authentication**: A **hybrid system** supports both Replit Auth (Google, GitHub, Email via OIDC) and a standalone email/password system (Bcrypt, Passport Local Strategy, Zod validation, rate limiting).
+- **Video Platform**: Supports vertical video uploads with real-time preview, 7 filters, 3 speed controls, FreeMind Vision branding, and full localization.
+- **Monetization**: Implements a virtual currency (YimiCoins) system, credit packages, and virtual gifts with a 60/40 revenue split.
+- **Internationalization (i18n)**: Supports 7 languages (French, English, Wolof, Bambara, Swahili, Arabic, Portuguese) using a React Context-based system.
+- **Payment Processing**: Integrates **Stripe** for card payments, and dedicated pages for Mobile Money providers (Orange Money, MTN Money, Wave) and bank transfers.
+- **Social Features**: Includes follow/unfollow system and enhanced user profiles.
+- **Share Purchase System**: Allows users to buy platform equity at $108 per share, featuring a multi-step purchase flow, portfolio management, and real-time platform statistics.
+- **Search Interface**: TikTok-style expandable search bar.
+- **Advanced Analytics System**: Creator dashboard with 6 KPI cards, interactive charts, and a top videos table.
+- **Badge & Achievement System**: Gamification with 19 badges across 4 tiers, auto-award logic, and profile integration.
+- **Referral Program**: Unique 9-character codes, 100 YimiCoins bonus rewards, anti-fraud measures, and a stats dashboard.
 
 ### Core System Design
-- **Database**: **PostgreSQL** managed by **Drizzle ORM** with intelligent driver selection:
-  - **Neon WebSocket driver** for Neon-hosted databases (neon.tech/neon.database domains)
-  - **Standard PostgreSQL driver (pg)** for Render and other providers
-  - Auto-detection based on DATABASE_URL, supports SSL in production
-  - Database schema includes: users, videos, comments, likes, gift types, gifts, credit packages, transactions, shares, share transactions, share price history, notifications, badge types, user badges, referrals, and sessions
-- **Revenue Model**: Creators receive 60% of the value of gifts received (converted to USD), with the platform retaining 40%.
-- **Equity Model**: Platform shares are sold at $108 each with a total platform valuation of $1,080,000 (10,000 shares). Share price history is tracked for investor transparency.
-- **Project Structure**: Organized into `client/` (React frontend), `server/` (Express backend), and `shared/` (shared types and Drizzle schema).
+- **Database**: **PostgreSQL** managed by **Drizzle ORM**, with intelligent driver selection (Neon WebSocket for Neon, standard pg for others). Schema includes users, videos, monetization, shares, notifications, badges, and referrals.
+- **Revenue Model**: Creators receive 60% of gift value, platform retains 40%.
+- **Equity Model**: Platform shares are $108 each (total valuation $1,080,000 for 10,000 shares), with tracked price history.
+- **Project Structure**: Organized into `client/` (React), `server/` (Express), and `shared/` (types/schema).
 
 ### API Endpoints
-Comprehensive API endpoints are provided for:
-- **Authentication**: User login, logout, session management
-- **Video Management**: Upload, fetch, delete videos with stats
-- **Social Interactions**: Comments, likes, follows, messages
-- **Monetization**: Gift transactions, credit purchases, earnings tracking
-- **Analytics**: Creator dashboard statistics, video performance, engagement metrics
-- **Share System**: Current share price, portfolio holdings, transaction history, purchase intent creation, Stripe webhooks
-- **User Profiles**: Profile retrieval and updates
-- **Notifications**: Real-time notifications, read/unread status, notification count
-- **Badges**: Badge types listing, user badges retrieval, automatic badge checking
-- **Referrals**: Referral code generation, stats tracking, code application, referral history
+Comprehensive APIs cover authentication, video management, social interactions, monetization, analytics, share system, user profiles, notifications, badges, and referrals.
 
 ## External Dependencies
 
-- **Replit Auth**: For user authentication (Google, GitHub, Email).
+- **Replit Auth**: For multi-provider user authentication (Google, GitHub, Email).
 - **Neon (PostgreSQL)**: Managed cloud database service.
 - **Stripe**: For credit/debit card payment processing.
-- **Mobile Money Providers**: APIs/integrations for Orange Money, MTN Money, Wave (specific API details not listed, but integration is present).
-- **Bank Transfer Systems**: Integration with banking systems for facilitating bank transfers (e.g., ECO BANQUE).
-
-## Deployment Configuration
-
-### Current Deployment Status
-- **Deployment Type**: Autoscale (recommended for variable workload)
-- **Build Command**: `npm run build`
-- **Start Command**: `./start-production.sh` (recommended) or `npm run start`
-- **Port**: 5000 (mapped to external port 80)
-
-### Important Deployment Notes
-
-**DEPLOYMENT STATUS: READY ✅**
-
-**Latest Fixes (Nov 9, 2024 - 9:00 PM):**
-- ✅ **DATABASE DRIVER FIX**: Fixed Render deployment by adding intelligent database driver selection
-  - Problem: Neon WebSocket driver cannot connect to Render's TCP PostgreSQL
-  - Solution: Auto-detect database provider and use appropriate driver (Neon WebSocket for Neon, standard pg for Render)
-  - Impact: `/api/videos` and all database routes now work correctly on Render
-- ✅ **CONDITIONAL AUTHENTICATION**: Made Replit Auth optional for external deployments
-  - `isReplitAuthEnabled()` checks for REPL_ID environment variable
-  - Guest mode allows public routes to work without authentication
-  - Protected routes return clear 401 messages in guest mode
-- ✅ Installed `pg` and `@types/pg` packages for standard PostgreSQL support
-- ✅ Added connection diagnostics and error logging to database layer
-
-**Previous Fixes (Nov 9, 2024 - 7:17 AM):**
-- ✅ **ROOT CAUSE IDENTIFIED**: `npm run start` script doesn't reliably set NODE_ENV on deployment platforms
-- ✅ **SOLUTION**: Created `start-production.sh` wrapper script that guarantees NODE_ENV=production
-- ✅ Tested production startup: Server starts correctly with wrapper script
-- ✅ Static files served from dist/public/ correctly
-- ✅ Health checks working (returns {"status":"ok",...})
-- ✅ WebSocket configured correctly
-- ✅ All environment variables properly configured in .replit
-
-**Previous Fixes (Nov 9, 2024):**
-- ✅ Fixed production startup: Server now properly serves static files instead of trying to load Vite middleware
-- ✅ Refactored `registerRoutes` to return Express app instead of HTTP server
-- ✅ HTTP server now created AFTER environment detection (dev/production)
-- ✅ Enhanced diagnostic logging for production mode debugging
-- ✅ Health checks now include environment, uptime, and port information
-- ✅ **WebSocket simplified**: Removed session-based auth during upgrade to prevent production crashes
-  - Note: WebSocket auth now happens post-connection (TODO: add JWT tokens for security)
-
-**DEPLOYMENT CONFIGURATION: .replit File**
-
-The `.replit` file is **currently CORRECT** ✅:
-1. ✅ `NODE_ENV="production"` properly set in [deployment.env] section
-2. ✅ Single port configuration (5000→80) - required for Autoscale
-3. ⚠️ **ACTION REQUIRED**: Change `run` command from `["npm", "run", "start"]` to `["./start-production.sh"]`
-
-**📋 ACTION REQUIRED TO DEPLOY:**
-
-To fix the deployment timeout issue, update your `.replit` file:
-
-1. **Open `.replit` in the editor**
-2. **Find line 11** which currently says:
-   ```toml
-   run = ["npm", "run", "start"]
-   ```
-3. **Change it to**:
-   ```toml
-   run = ["./start-production.sh"]
-   ```
-4. **Save the file**
-5. **Redeploy (republish) your application**
-
-**Why this fix works:**
-- The `npm run start` script in package.json tries to set NODE_ENV using shell syntax
-- This doesn't work reliably on deployment platforms
-- The `start-production.sh` wrapper script guarantees NODE_ENV is properly set before starting the server
-
-**Current correct `.replit` configuration:**
-```toml
-[deployment]
-deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["./start-production.sh"]  # ← Changed from npm run start
-
-[deployment.env]
-NODE_ENV = "production"
-PORT = "5000"  # ← Added for clarity
-
-[[ports]]
-localPort = 5000
-externalPort = 80
-```
-
-### Production Readiness Verification
-The application code is production-ready:
-- ✅ NODE_ENV=production configured
-- ✅ Server binds to 0.0.0.0:5000 (not localhost)
-- ✅ Health checks at /health and /api/health
-- ✅ Comprehensive error handling with graceful shutdown
-- ✅ Detailed startup logging with [STARTUP] tags
-- ✅ Static files served from dist/public/
-- ✅ Build optimized (45KB bundle)
-- ✅ E2E tests validated
-- ✅ Manual production testing: successful
+- **Mobile Money Providers**: Integrations for Orange Money, MTN Money, Wave.
+- **Bank Transfer Systems**: Integration with banking systems (e.g., ECO BANQUE).
