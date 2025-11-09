@@ -26,6 +26,7 @@ import Search from "@/pages/Search";
 import Analytics from "@/pages/Analytics";
 import Shares from "@/pages/Shares";
 import Referral from "@/pages/Referral";
+import Subscription from "@/pages/Subscription";
 import AppLayout from "@/components/AppLayout";
 
 function Router() {
@@ -138,6 +139,11 @@ function Router() {
       <Route path="/referral">
         <AppLayout>
           <Referral />
+        </AppLayout>
+      </Route>
+      <Route path="/subscription">
+        <AppLayout>
+          <Subscription />
         </AppLayout>
       </Route>
       <Route component={NotFound} />
