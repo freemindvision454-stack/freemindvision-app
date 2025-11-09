@@ -1844,5 +1844,136 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   });
 
+  // ===== ADMIN ROUTES =====
+
+  // Admin middleware: Check isAdmin flag + shared-secret header
+  const requiresAdmin = async (req: any, res: Response, next: any) => {
+    try {
+      // Check authentication first
+      if (!req.isAuthenticated || !req.isAuthenticated() || !req.user?.claims?.sub) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+
+      // Check isAdmin flag
+      if (!user?.isAdmin) {
+        return res.status(403).json({ message: "Admin privileges required" });
+      }
+
+      // Optional: Check shared-secret header for extra security (can be added later)
+      const adminSecret = req.headers["x-admin-secret"];
+      const expectedSecret = process.env.ADMIN_SECRET;
+      
+      if (expectedSecret && adminSecret !== expectedSecret) {
+        console.warn(`Failed admin secret check for user ${userId}`);
+        return res.status(403).json({ message: "Invalid admin credentials" });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Admin middleware error:", error);
+      res.status(500).json({ message: "Admin authorization failed" });
+    }
+  };
+
+  // Process view earnings batch job
+  app.post("/api/admin/process-view-earnings", requiresAuth, requiresAdmin, async (req: any, res) => {
+    try {
+      const startTime = Date.now();
+      
+      // Parse optional parameters
+      const batchSize = parseInt(req.query.batchSize || "200");
+      const resumeCursor = req.query.resumeCursor || null;
+
+      // Get monetization settings
+      const settings = await storage.getMonetizationSettings();
+
+      // Get all videos from monetized creators (with pagination)
+      const allVideos = await storage.getAllVideos();
+      
+      // Filter videos from monetized creators
+      const monetizedVideos = [];
+      for (const video of allVideos) {
+        const creator = await storage.getUser(video.creatorId);
+        if (creator?.isMonetized) {
+          monetizedVideos.push(video);
+        }
+      }
+
+      // Apply resume cursor if provided (skip the cursor video to avoid double-processing)
+      let videosToProcess = monetizedVideos;
+      if (resumeCursor) {
+        const resumeIndex = monetizedVideos.findIndex(v => v.id === resumeCursor);
+        if (resumeIndex !== -1) {
+          // Start AFTER the cursor to avoid reprocessing the last video
+          videosToProcess = monetizedVideos.slice(resumeIndex + 1);
+        }
+      }
+
+      // Limit to batch size
+      const batch = videosToProcess.slice(0, batchSize);
+
+      // Process batch with error isolation
+      let processedCount = 0;
+      let totalEarningsFcfa = 0;
+      let totalEarningsUsd = 0;
+      const failures: Array<{ videoId: string; error: string }> = [];
+
+      for (const video of batch) {
+        try {
+          // Calculate earnings before payout to track totals
+          const existingEarnings = await storage.getVideoViewEarnings(video.id);
+          const lastViews = existingEarnings?.totalViews || 0;
+          const newViews = Math.max(0, video.views - lastViews);
+          
+          if (newViews > 0) {
+            const earningsPerViewFcfa = parseFloat(settings.pricePerViewFcfa);
+            const earningsPerViewUsd = parseFloat(settings.pricePerViewUsd);
+            const newEarningsFcfa = newViews * earningsPerViewFcfa;
+            const newEarningsUsd = newViews * earningsPerViewUsd;
+            
+            totalEarningsFcfa += newEarningsFcfa;
+            totalEarningsUsd += newEarningsUsd;
+          }
+
+          // Apply payout
+          await storage.applyViewEarningsPayout(video.id, settings);
+          processedCount++;
+        } catch (error: any) {
+          console.error(`Failed to process video ${video.id}:`, error);
+          failures.push({
+            videoId: video.id,
+            error: error.message || "Unknown error",
+          });
+        }
+      }
+
+      // Calculate next cursor
+      const hasMore = videosToProcess.length > batchSize;
+      const nextCursor = hasMore ? batch[batch.length - 1]?.id : null;
+
+      const duration = Date.now() - startTime;
+
+      res.json({
+        success: true,
+        processedVideos: processedCount,
+        totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
+        totalEarningsUsd: totalEarningsUsd.toFixed(2),
+        failures: failures.length,
+        failureDetails: failures,
+        hasMore,
+        nextCursor,
+        batchSize,
+        durationMs: duration,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error processing view earnings batch:", error);
+      res.status(500).json({ message: "Failed to process view earnings" });
+    }
+  });
+
   return app;
 }

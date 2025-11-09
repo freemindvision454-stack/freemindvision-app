@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   isCreator: boolean("is_creator").default(false).notNull(),
   isVerified: boolean("is_verified").default(false).notNull(), // Verified badge status
   isMonetized: boolean("is_monetized").default(false).notNull(), // Monetization enabled (auto at 7000 followers)
+  isAdmin: boolean("is_admin").default(false).notNull(), // Admin privileges for administrative tasks
   followerCount: integer("follower_count").default(0).notNull(), // Total followers count
   creditBalance: integer("credit_balance").default(0).notNull(), // YimiCoins balance
   totalEarnings: numeric("total_earnings", { precision: 12, scale: 2 }).default("0").notNull(), // Total earnings in USD
