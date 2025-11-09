@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
@@ -6,7 +6,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 channel = "stable-24_05"
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "cloudrun"
 build = ["npm", "run", "build"]
 run = ["node", "start-prod.js"]
 
@@ -16,10 +16,6 @@ NODE_ENV = "production"
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
 
 [env]
 PORT = "5000"
