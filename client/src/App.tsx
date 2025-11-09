@@ -27,6 +27,7 @@ import Analytics from "@/pages/Analytics";
 import Shares from "@/pages/Shares";
 import Referral from "@/pages/Referral";
 import Subscription from "@/pages/Subscription";
+import VerifiedBadge from "@/pages/VerifiedBadge";
 import AppLayout from "@/components/AppLayout";
 
 function Router() {
@@ -144,6 +145,11 @@ function Router() {
       <Route path="/subscription">
         <AppLayout>
           <Subscription />
+        </AppLayout>
+      </Route>
+      <Route path="/verified-badge">
+        <AppLayout>
+          <VerifiedBadge />
         </AppLayout>
       </Route>
       <Route component={NotFound} />

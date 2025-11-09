@@ -3,7 +3,7 @@ import { useRoute } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Eye, Heart, Video as VideoIcon, Gift, UserPlus, UserMinus } from "lucide-react";
+import { Eye, Heart, Video as VideoIcon, Gift, UserPlus, UserMinus, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { User, Video } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
@@ -138,7 +138,15 @@ export default function Profile() {
             </Avatar>
 
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-3xl font-poppins font-bold mb-2">{displayName}</h1>
+              <div className="flex items-center gap-2 justify-center md:justify-start mb-2">
+                <h1 className="text-3xl font-poppins font-bold">{displayName}</h1>
+                {profile.user.isVerified && (
+                  <CheckCircle 
+                    className="w-7 h-7 text-blue-500 fill-current" 
+                    data-testid="verified-badge-icon"
+                  />
+                )}
+              </div>
               {profile.user.isCreator && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mb-3">
                   <VideoIcon className="w-4 h-4 text-primary" />
