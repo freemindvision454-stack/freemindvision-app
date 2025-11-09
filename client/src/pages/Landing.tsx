@@ -51,7 +51,7 @@ export default function Landing() {
             <Button 
               size="lg" 
               className="text-lg h-14 px-8 rounded-full font-poppins font-semibold"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => window.location.href = "/signup"}
               data-testid="button-get-started"
             >
               {t.landing.getStarted}
@@ -60,7 +60,7 @@ export default function Landing() {
               size="lg" 
               variant="outline" 
               className="text-lg h-14 px-8 rounded-full font-poppins font-semibold"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => window.location.href = "/login"}
               data-testid="button-login"
             >
               {t.landing.login}
@@ -227,7 +227,7 @@ export default function Landing() {
             <Button 
               size="lg" 
               className="text-lg h-14 px-10 rounded-full font-poppins font-semibold"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => window.location.href = "/signup"}
               data-testid="button-join-now"
             >
               Join FreeMind Vision Now

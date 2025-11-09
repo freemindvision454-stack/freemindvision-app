@@ -7,6 +7,8 @@ import { I18nProvider } from "@/lib/i18n";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
+import SignupPage from "@/pages/SignupPage";
+import LoginPage from "@/pages/LoginPage";
 import Feed from "@/pages/Feed";
 import Explore from "@/pages/Explore";
 import Following from "@/pages/Following";
@@ -29,10 +31,12 @@ import AppLayout from "@/components/AppLayout";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Show landing page for unauthenticated users on any route
+  // Show landing page for unauthenticated users on any route (except /signup and /login)
   if (isLoading || !isAuthenticated) {
     return (
       <Switch>
+        <Route path="/signup" component={SignupPage} />
+        <Route path="/login" component={LoginPage} />
         <Route path="*" component={Landing} />
       </Switch>
     );

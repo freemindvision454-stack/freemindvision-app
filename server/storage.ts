@@ -52,12 +52,18 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, inArray } from "drizzle-orm";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   // User operations (Replit Auth required)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(userId: string, updates: Partial<User>): Promise<User>;
+  
+  // Local authentication operations
+  findUserByEmail(email: string): Promise<User | undefined>;
+  createUserWithPassword(user: { email: string; password: string; firstName: string; lastName: string }): Promise<User>;
+  verifyPassword(user: User, password: string): Promise<boolean>;
 
   // Video operations
   createVideo(video: InsertVideo): Promise<Video>;
@@ -180,6 +186,52 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  // Local authentication operations
+  async findUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()));
+    return user;
+  }
+
+  async createUserWithPassword(userData: { 
+    email: string; 
+    password: string; 
+    firstName: string; 
+    lastName: string 
+  }): Promise<User> {
+    // Hash password with bcrypt (cost factor 12 for production security)
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+    
+    // Create user with hashed password
+    const [user] = await db
+      .insert(users)
+      .values({
+        email: userData.email.toLowerCase(),
+        password: hashedPassword,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        isCreator: false,
+        creditBalance: 0,
+        totalEarnings: 0,
+        currency: "USD",
+      })
+      .returning();
+    
+    return user;
+  }
+
+  async verifyPassword(user: User, password: string): Promise<boolean> {
+    if (!user.password) {
+      // OAuth user without password
+      return false;
+    }
+    
+    // Use constant-time comparison via bcrypt
+    return await bcrypt.compare(password, user.password);
   }
 
   // Video operations

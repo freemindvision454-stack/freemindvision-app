@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import express from "express";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requiresAuth } from "./replitAuth";
+import { setupLocalStrategy } from "./auth/localStrategy";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -11,6 +12,9 @@ import { db } from "./db";
 import { users, referrals } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { getOnlineUsers, isUserOnline } from "./websocket";
+import passport from "passport";
+import { rateLimit } from "express-rate-limit";
+import { registerSchema, loginSchema, type SessionUser } from "@shared/authSchemas";
 
 // Configure multer for file uploads
 const uploadStorage = multer.diskStorage({
@@ -115,6 +119,136 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
   // Auth middleware
   await setupAuth(app);
+  
+  // Setup local strategy for email/password authentication
+  setupLocalStrategy();
+
+  // Rate limiting for auth endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 requests per window
+    message: { message: "Trop de tentatives. Veuillez réessayer dans 15 minutes." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // ===== LOCAL AUTH ROUTES =====
+  
+  // Register new user with email/password
+  app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) => {
+    try {
+      // Validate input
+      const result = registerSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({
+          message: "Données invalides",
+          errors: result.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        });
+      }
+      
+      const { email, password, firstName, lastName } = result.data;
+      
+      // Check if email already exists
+      const existingUser = await storage.findUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ message: "Cet email est déjà utilisé" });
+      }
+      
+      // Create user with hashed password
+      const user = await storage.createUserWithPassword({
+        email,
+        password,
+        firstName,
+        lastName,
+      });
+      
+      // Auto-login after registration
+      const sessionUser: SessionUser = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        bio: user.bio,
+        isCreator: user.isCreator,
+        creditBalance: user.creditBalance,
+        totalEarnings: user.totalEarnings,
+        currency: user.currency,
+        referralCode: user.referralCode,
+        authProvider: "local",
+      };
+      
+      // Login user via Passport
+      req.login(sessionUser, (err) => {
+        if (err) {
+          console.error("Login error after registration:", err);
+          return res.status(500).json({ message: "Inscription réussie mais échec de connexion automatique" });
+        }
+        
+        res.status(201).json({ user: sessionUser });
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Erreur lors de l'inscription" });
+    }
+  });
+  
+  // Login with email/password
+  app.post("/api/auth/login", authLimiter, (req: Request, res: Response, next) => {
+    // Validate input
+    const result = loginSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        message: "Données invalides",
+        errors: result.error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+      });
+    }
+    
+    // Authenticate with Passport local strategy
+    passport.authenticate("local", (err: any, user: SessionUser | false, info: any) => {
+      if (err) {
+        console.error("Login error:", err);
+        return res.status(500).json({ message: "Erreur lors de la connexion" });
+      }
+      
+      if (!user) {
+        return res.status(401).json({ message: info?.message || "Email ou mot de passe incorrect" });
+      }
+      
+      // Login user
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Session error:", loginErr);
+          return res.status(500).json({ message: "Erreur de session" });
+        }
+        
+        res.json({ user });
+      });
+    })(req, res, next);
+  });
+  
+  // Logout
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ message: "Erreur lors de la déconnexion" });
+      }
+      
+      res.json({ message: "Déconnexion réussie" });
+    });
+  });
+  
+  // Get current session (works for both Replit Auth and local auth)
+  app.get("/api/auth/session", (req: Request, res: Response) => {
+    if (req.user) {
+      res.json({ user: req.user });
+    } else {
+      res.json({ user: null });
+    }
+  });
 
   // Serve uploaded files
   app.use("/uploads", (req, res, next) => {
