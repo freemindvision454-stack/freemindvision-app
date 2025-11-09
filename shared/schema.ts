@@ -10,6 +10,7 @@ import {
   varchar,
   boolean,
   real,
+  numeric,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -36,8 +37,12 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   bio: text("bio"),
   isCreator: boolean("is_creator").default(false).notNull(),
+  isVerified: boolean("is_verified").default(false).notNull(), // Verified badge status
+  isMonetized: boolean("is_monetized").default(false).notNull(), // Monetization enabled (auto at 7000 followers)
+  followerCount: integer("follower_count").default(0).notNull(), // Total followers count
   creditBalance: integer("credit_balance").default(0).notNull(), // YimiCoins balance
-  totalEarnings: real("total_earnings").default(0).notNull(), // Total earnings in USD
+  totalEarnings: numeric("total_earnings", { precision: 12, scale: 2 }).default("0").notNull(), // Total earnings in USD
+  viewEarnings: numeric("view_earnings", { precision: 12, scale: 2 }).default("0").notNull(), // Earnings from views (0.1 FCFA per view)
   currency: varchar("currency").default("USD").notNull(), // Preferred currency (FCFA, USD, EUR, etc.)
   stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID for payments
   stripeConnectId: varchar("stripe_connect_id"), // Stripe Connect ID for creator payouts
@@ -203,7 +208,7 @@ export const giftTypes = pgTable("gift_types", {
   name: varchar("name", { length: 100 }).notNull(),
   iconName: varchar("icon_name", { length: 50 }).notNull(), // Icon identifier from lucide-react
   creditCost: integer("credit_cost").notNull(), // Cost in YimiCoins
-  usdValue: real("usd_value").notNull(), // Real money value in USD
+  usdValue: numeric("usd_value", { precision: 10, scale: 2 }).notNull(), // Real money value in USD
   color: varchar("color", { length: 50 }), // Color for the gift icon
 });
 
@@ -232,7 +237,7 @@ export const creditPackages = pgTable("credit_packages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name", { length: 100 }).notNull(),
   credits: integer("credits").notNull(), // Number of YimiCoins
-  priceUsd: real("price_usd").notNull(), // Price in USD
+  priceUsd: numeric("price_usd", { precision: 10, scale: 2 }).notNull(), // Price in USD
   bonus: integer("bonus").default(0).notNull(), // Bonus credits
   isPopular: boolean("is_popular").default(false).notNull(),
 });
@@ -244,7 +249,7 @@ export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   type: varchar("type", { length: 50 }).notNull(), // 'purchase', 'gift_received', 'withdrawal'
-  amount: real("amount").notNull(), // Amount in USD
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(), // Amount in USD
   credits: integer("credits"), // Credits involved (for purchases)
   paymentMethod: varchar("payment_method", { length: 50 }), // 'stripe', 'orange_money', 'mtn_money', 'wave', 'paypal'
   paymentProvider: varchar("payment_provider", { length: 100 }), // Provider-specific transaction ID
@@ -374,8 +379,8 @@ export const followsRelations = relations(follows, ({ one }) => ({
 // Stock/Share Price History - Tracks the value of FreeMind Vision shares over time
 export const sharePriceHistory = pgTable("share_price_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  priceUsd: real("price_usd").notNull(), // Price per share in USD
-  platformValue: real("platform_value").notNull(), // Total platform valuation
+  priceUsd: numeric("price_usd", { precision: 10, scale: 2 }).notNull(), // Price per share in USD
+  platformValue: numeric("platform_value", { precision: 15, scale: 2 }).notNull(), // Total platform valuation
   totalShares: integer("total_shares").notNull(), // Total shares issued
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
@@ -389,8 +394,8 @@ export const shares = pgTable("shares", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   quantity: integer("quantity").notNull(), // Number of shares owned
-  purchasePrice: real("purchase_price").notNull(), // Price paid per share in USD
-  totalCost: real("total_cost").notNull(), // Total amount paid
+  purchasePrice: numeric("purchase_price", { precision: 10, scale: 2 }).notNull(), // Price paid per share in USD
+  totalCost: numeric("total_cost", { precision: 12, scale: 2 }).notNull(), // Total amount paid
   purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
 }, (table) => [
   index("shares_user_idx").on(table.userId),
@@ -409,8 +414,8 @@ export const shareTransactions = pgTable("share_transactions", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   type: varchar("type", { length: 50 }).notNull(), // 'purchase' or 'sale'
   quantity: integer("quantity").notNull(), // Number of shares
-  pricePerShare: real("price_per_share").notNull(), // Price per share in USD
-  totalAmount: real("total_amount").notNull(), // Total transaction amount
+  pricePerShare: numeric("price_per_share", { precision: 10, scale: 2 }).notNull(), // Price per share in USD
+  totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(), // Total transaction amount
   status: varchar("status", { length: 50 }).default("pending").notNull(), // 'pending', 'completed', 'failed'
   stripePaymentIntentId: varchar("stripe_payment_intent_id"), // Stripe payment reference
   paymentMethod: varchar("payment_method", { length: 50 }), // Payment method used
@@ -496,3 +501,125 @@ export const insertReferralSchema = createInsertSchema(referrals).omit({
   createdAt: true,
 });
 export type InsertReferral = z.infer<typeof insertReferralSchema>;
+
+// Subscription Plans - Premium tiers (Basic, Pro, Enterprise)
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull(), // 'Basic', 'Pro', 'Enterprise'
+  description: text("description").notNull(),
+  priceUsd: numeric("price_usd", { precision: 10, scale: 2 }).notNull(), // Monthly price in USD
+  priceFcfa: numeric("price_fcfa", { precision: 12, scale: 2 }).notNull(), // Monthly price in FCFA
+  stripePriceId: varchar("stripe_price_id"), // Stripe Price ID for subscriptions
+  features: text("features").array().notNull(), // List of features
+  maxVideos: integer("max_videos"), // Max videos per month (null = unlimited)
+  maxStorage: integer("max_storage"), // Max storage in GB (null = unlimited)
+  adFree: boolean("ad_free").default(false).notNull(), // No ads for this tier
+  prioritySupport: boolean("priority_support").default(false).notNull(),
+  analyticsAccess: boolean("analytics_access").default(true).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  order: integer("order").default(0).notNull(), // Display order
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+
+// User Subscriptions - Active subscriptions for users
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id, { onDelete: "cascade" }),
+  stripeSubscriptionId: varchar("stripe_subscription_id").unique(), // Stripe Subscription ID
+  status: varchar("status", { length: 20 }).default("active").notNull(), // 'active', 'canceled', 'expired', 'past_due'
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("user_subscriptions_user_idx").on(table.userId),
+  index("user_subscriptions_plan_idx").on(table.planId),
+  index("user_subscriptions_status_idx").on(table.status),
+]);
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
+
+// Verified Badge Purchases - Paid verification for VIP/brands
+export const verifiedBadgePurchases = pgTable("verified_badge_purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  priceUsd: numeric("price_usd", { precision: 10, scale: 2 }).notNull(), // Price paid in USD
+  priceFcfa: numeric("price_fcfa", { precision: 12, scale: 2 }).notNull(), // Price paid in FCFA
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"), // Stripe Payment Intent ID
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // 'pending', 'approved', 'rejected'
+  submittedDocuments: text("submitted_documents").array(), // URLs to verification documents
+  rejectionReason: text("rejection_reason"), // Admin rejection reason
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by"), // Admin user ID who approved
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("verified_badge_purchases_user_idx").on(table.userId),
+  index("verified_badge_purchases_status_idx").on(table.status),
+]);
+
+export type VerifiedBadgePurchase = typeof verifiedBadgePurchases.$inferSelect;
+export const insertVerifiedBadgePurchaseSchema = createInsertSchema(verifiedBadgePurchases).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertVerifiedBadgePurchase = z.infer<typeof insertVerifiedBadgePurchaseSchema>;
+
+// Monetization Settings - Global platform monetization configuration (single row)
+export const monetizationSettings = pgTable("monetization_settings", {
+  id: varchar("id").primaryKey().default("platform_settings"), // Single row with fixed ID
+  minFollowersForMonetization: integer("min_followers_monetization").default(7000).notNull(), // Auto-enable monetization at this threshold
+  pricePerViewFcfa: numeric("price_per_view_fcfa", { precision: 10, scale: 4 }).default("0.1").notNull(), // 0.1 FCFA per view
+  pricePerViewUsd: numeric("price_per_view_usd", { precision: 10, scale: 6 }).default("0.00015").notNull(), // ~0.1 FCFA in USD
+  verifiedBadgePriceUsd: numeric("verified_badge_price_usd", { precision: 10, scale: 2 }).default("100").notNull(), // $100 for verified badge
+  verifiedBadgePriceFcfa: numeric("verified_badge_price_fcfa", { precision: 12, scale: 2 }).default("65500").notNull(), // ~$100 in FCFA
+  autoWithdrawThresholdUsd: numeric("auto_withdraw_threshold_usd", { precision: 10, scale: 2 }).default("50").notNull(), // Min amount for withdrawal
+  platformCommissionPercent: integer("platform_commission_percent").default(40).notNull(), // Platform takes 40% from gifts
+  creatorSharePercent: integer("creator_share_percent").default(60).notNull(), // Creators get 60% from gifts
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type MonetizationSetting = typeof monetizationSettings.$inferSelect;
+export const insertMonetizationSettingSchema = createInsertSchema(monetizationSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertMonetizationSetting = z.infer<typeof insertMonetizationSettingSchema>;
+
+// Video View Earnings - Track earnings from video views (0.1 FCFA per view)
+export const videoViewEarnings = pgTable("video_view_earnings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoId: varchar("video_id").notNull().references(() => videos.id, { onDelete: "cascade" }),
+  creatorId: varchar("creator_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  totalViews: integer("total_views").default(0).notNull(), // Total monetized views
+  earningsFcfa: numeric("earnings_fcfa", { precision: 12, scale: 2 }).default("0").notNull(), // Total earnings in FCFA (totalViews * 0.1)
+  earningsUsd: numeric("earnings_usd", { precision: 12, scale: 2 }).default("0").notNull(), // Total earnings in USD (converted)
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("video_view_earnings_video_idx").on(table.videoId),
+  index("video_view_earnings_creator_idx").on(table.creatorId),
+  uniqueIndex("video_view_earnings_video_unique_idx").on(table.videoId),
+]);
+
+export type VideoViewEarning = typeof videoViewEarnings.$inferSelect;
+export const insertVideoViewEarningSchema = createInsertSchema(videoViewEarnings).omit({
+  id: true,
+  createdAt: true,
+  lastCalculatedAt: true,
+});
+export type InsertVideoViewEarning = z.infer<typeof insertVideoViewEarningSchema>;

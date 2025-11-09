@@ -19,6 +19,11 @@ import {
   badgeTypes,
   userBadges,
   referrals,
+  subscriptionPlans,
+  userSubscriptions,
+  verifiedBadgePurchases,
+  monetizationSettings,
+  videoViewEarnings,
   type User,
   type UpsertUser,
   type Video,
@@ -49,6 +54,16 @@ import {
   type InsertUserBadge,
   type Referral,
   type InsertReferral,
+  type SubscriptionPlan,
+  type InsertSubscriptionPlan,
+  type UserSubscription,
+  type InsertUserSubscription,
+  type VerifiedBadgePurchase,
+  type InsertVerifiedBadgePurchase,
+  type MonetizationSetting,
+  type InsertMonetizationSetting,
+  type VideoViewEarning,
+  type InsertVideoViewEarning,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, inArray } from "drizzle-orm";
@@ -155,6 +170,31 @@ export interface IStorage {
   createReferral(referral: InsertReferral): Promise<Referral>;
   getReferralsByReferrer(referrerId: string): Promise<Referral[]>;
   getReferralStats(userId: string): Promise<{ totalReferrals: number; totalBonus: number; pendingReferrals: number }>;
+
+  // Subscription Plans operations
+  getSubscriptionPlans(params?: { planId?: string; isActive?: boolean }): Promise<SubscriptionPlan[]>;
+  createUserSubscription(data: { userId: string; planId: string; stripeSubscriptionId: string; currentPeriodStart: Date; currentPeriodEnd: Date }): Promise<UserSubscription>;
+  getUserSubscription(userId: string): Promise<UserSubscription | undefined>;
+  updateSubscriptionStatus(stripeSubscriptionId: string, status: string, currentPeriodEnd?: Date): Promise<void>;
+  cancelSubscription(userId: string): Promise<void>;
+  recordSubscriptionPayment(userId: string, subscriptionId: string, amount: string): Promise<Transaction>;
+
+  // Verified Badge operations
+  createBadgePurchase(data: { userId: string; priceUsd: string; priceFcfa: string; submittedDocuments?: string[]; stripePaymentIntentId?: string }): Promise<VerifiedBadgePurchase>;
+  getBadgePurchase(userId: string): Promise<VerifiedBadgePurchase | undefined>;
+  approveBadgePurchase(purchaseId: string, adminId: string, adminNotes?: string): Promise<void>;
+  rejectBadgePurchase(purchaseId: string, adminId: string, reason: string): Promise<void>;
+
+  // View Earnings operations
+  queueVideoViewAggregation(videoId: string, viewDelta: number): Promise<void>;
+  applyViewEarningsPayout(videoId: string, settings: MonetizationSetting): Promise<void>;
+  getVideoViewEarnings(videoId: string): Promise<VideoViewEarning | undefined>;
+  getTotalViewEarnings(userId: string): Promise<string>;
+
+  // Monetization Settings operations
+  getMonetizationSettings(): Promise<MonetizationSetting>;
+  updateMonetizationSettings(settings: Partial<MonetizationSetting>): Promise<MonetizationSetting>;
+  checkAndEnableMonetization(userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -454,13 +494,39 @@ export class DatabaseStorage implements IStorage {
 
     // Create new follow (database unique constraint prevents duplicates)
     const [follow] = await db.insert(follows).values({ followerId, followingId }).returning();
+    
+    // Atomically increment followerCount for the followed user
+    await db
+      .update(users)
+      .set({ 
+        followerCount: sql`${users.followerCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, followingId));
+    
+    // Check if user should be auto-monetized (7000+ followers)
+    await this.checkAndEnableMonetization(followingId);
+    
     return follow;
   }
 
   async unfollowUser(followerId: string, followingId: string): Promise<void> {
-    await db
+    // Delete and check if a row was actually removed
+    const deleted = await db
       .delete(follows)
-      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));
+      .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)))
+      .returning();
+    
+    // Only decrement followerCount if a follow was actually deleted
+    if (deleted.length > 0) {
+      await db
+        .update(users)
+        .set({ 
+          followerCount: sql`GREATEST(0, ${users.followerCount} - 1)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, followingId));
+    }
   }
 
   async isFollowing(followerId: string, followingId: string): Promise<boolean> {
@@ -502,7 +568,7 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
 
-    const followingIds = followingUsers.map(f => f.id);
+    const followingIds = followingUsers.map((f: { id: string }) => f.id);
 
     // Get videos from followed creators using inArray
     return await db
@@ -539,7 +605,7 @@ export class DatabaseStorage implements IStorage {
       await this.createTransaction({
         userId: giftData.recipientId,
         type: "gift_received",
-        amount: creatorEarnings,
+        amount: creatorEarnings.toString(),
         description: `Received ${quantity} ${giftType.name}(s)`,
         status: "completed",
       });
@@ -648,7 +714,7 @@ export class DatabaseStorage implements IStorage {
         return {
           ...video,
           earnings,
-          giftCount: videoGifts.reduce((sum, g) => sum + g.quantity, 0),
+          giftCount: videoGifts.reduce((sum: number, g: typeof videoGifts[0]) => sum + g.quantity, 0),
         };
       })
     );
@@ -723,7 +789,7 @@ export class DatabaseStorage implements IStorage {
       .groupBy(messages.senderId);
 
     const uniqueUserIds = Array.from(
-      new Set([...sent.map(s => s.otherUserId), ...received.map(r => r.otherUserId)])
+      new Set([...sent.map((s: { otherUserId: string }) => s.otherUserId), ...received.map((r: { otherUserId: string }) => r.otherUserId)])
     );
 
     // Get user details and last message for each conversation
@@ -889,9 +955,9 @@ export class DatabaseStorage implements IStorage {
       .from(shares);
 
     return {
-      currentPrice: currentPrice?.priceUsd || 108,
+      currentPrice: parseFloat(currentPrice?.priceUsd?.toString() || "108"),
       totalShares: totalSharesResult[0]?.total || 0,
-      platformValue: currentPrice?.platformValue || 1080000,
+      platformValue: parseFloat(currentPrice?.platformValue?.toString() || "1080000"),
       totalInvestors: totalInvestorsResult[0]?.count || 0,
     };
   }
@@ -1068,6 +1134,345 @@ export class DatabaseStorage implements IStorage {
       totalBonus,
       pendingReferrals,
     };
+  }
+
+  // Subscription Plans operations
+  async getSubscriptionPlans(params?: { planId?: string; isActive?: boolean }): Promise<SubscriptionPlan[]> {
+    let query = db.select().from(subscriptionPlans).$dynamic();
+    
+    if (params?.planId) {
+      query = query.where(eq(subscriptionPlans.id, params.planId));
+    }
+    
+    if (params?.isActive !== undefined) {
+      query = query.where(eq(subscriptionPlans.isActive, params.isActive));
+    }
+    
+    return await query.orderBy(subscriptionPlans.order);
+  }
+
+  async createUserSubscription(data: {
+    userId: string;
+    planId: string;
+    stripeSubscriptionId: string;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+  }): Promise<UserSubscription> {
+    const [subscription] = await db
+      .insert(userSubscriptions)
+      .values({
+        userId: data.userId,
+        planId: data.planId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        status: 'active',
+        currentPeriodStart: data.currentPeriodStart,
+        currentPeriodEnd: data.currentPeriodEnd,
+      })
+      .returning();
+    
+    return subscription;
+  }
+
+  async getUserSubscription(userId: string): Promise<UserSubscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(userSubscriptions)
+      .where(and(
+        eq(userSubscriptions.userId, userId),
+        eq(userSubscriptions.status, 'active')
+      ))
+      .orderBy(desc(userSubscriptions.createdAt))
+      .limit(1);
+    
+    return subscription;
+  }
+
+  async updateSubscriptionStatus(
+    stripeSubscriptionId: string,
+    status: string,
+    currentPeriodEnd?: Date
+  ): Promise<void> {
+    const updates: any = { status, updatedAt: new Date() };
+    if (currentPeriodEnd) {
+      updates.currentPeriodEnd = currentPeriodEnd;
+    }
+    
+    await db
+      .update(userSubscriptions)
+      .set(updates)
+      .where(eq(userSubscriptions.stripeSubscriptionId, stripeSubscriptionId));
+  }
+
+  async cancelSubscription(userId: string): Promise<void> {
+    await db
+      .update(userSubscriptions)
+      .set({
+        status: 'canceled',
+        cancelAtPeriodEnd: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(userSubscriptions.userId, userId));
+  }
+
+  async recordSubscriptionPayment(
+    userId: string,
+    subscriptionId: string,
+    amount: string
+  ): Promise<Transaction> {
+    return await this.createTransaction({
+      userId,
+      type: 'subscription_payment',
+      amount,
+      paymentMethod: 'stripe',
+      paymentProvider: subscriptionId,
+      description: 'Premium subscription payment',
+      status: 'completed',
+    });
+  }
+
+  // Verified Badge operations
+  async createBadgePurchase(data: {
+    userId: string;
+    priceUsd: string;
+    priceFcfa: string;
+    submittedDocuments?: string[];
+    stripePaymentIntentId?: string;
+  }): Promise<VerifiedBadgePurchase> {
+    const [purchase] = await db
+      .insert(verifiedBadgePurchases)
+      .values({
+        userId: data.userId,
+        priceUsd: data.priceUsd,
+        priceFcfa: data.priceFcfa,
+        submittedDocuments: data.submittedDocuments || [],
+        stripePaymentIntentId: data.stripePaymentIntentId,
+        status: 'pending',
+      })
+      .returning();
+    
+    return purchase;
+  }
+
+  async getBadgePurchase(userId: string): Promise<VerifiedBadgePurchase | undefined> {
+    const [purchase] = await db
+      .select()
+      .from(verifiedBadgePurchases)
+      .where(eq(verifiedBadgePurchases.userId, userId))
+      .orderBy(desc(verifiedBadgePurchases.createdAt))
+      .limit(1);
+    
+    return purchase;
+  }
+
+  async approveBadgePurchase(
+    purchaseId: string,
+    adminId: string,
+    adminNotes?: string
+  ): Promise<void> {
+    const [purchase] = await db
+      .update(verifiedBadgePurchases)
+      .set({
+        status: 'approved',
+        approvedAt: new Date(),
+        approvedBy: adminId,
+        rejectionReason: adminNotes, // Reusing field for admin notes
+      })
+      .where(eq(verifiedBadgePurchases.id, purchaseId))
+      .returning();
+    
+    if (purchase) {
+      // Set user as verified
+      await db
+        .update(users)
+        .set({ isVerified: true, updatedAt: new Date() })
+        .where(eq(users.id, purchase.userId));
+      
+      // Send notification
+      await this.createNotification({
+        userId: purchase.userId,
+        type: 'verified',
+        message: 'Votre badge vérifié a été approuvé ! Votre compte est maintenant certifié.',
+      });
+    }
+  }
+
+  async rejectBadgePurchase(
+    purchaseId: string,
+    adminId: string,
+    reason: string
+  ): Promise<void> {
+    const [purchase] = await db
+      .update(verifiedBadgePurchases)
+      .set({
+        status: 'rejected',
+        approvedBy: adminId,
+        rejectionReason: reason,
+      })
+      .where(eq(verifiedBadgePurchases.id, purchaseId))
+      .returning();
+    
+    if (purchase) {
+      // Send notification
+      await this.createNotification({
+        userId: purchase.userId,
+        type: 'system',
+        message: `Votre demande de badge vérifié a été rejetée. Raison: ${reason}`,
+      });
+    }
+  }
+
+  // View Earnings operations
+  async queueVideoViewAggregation(videoId: string, viewDelta: number): Promise<void> {
+    // Increment video views
+    await db
+      .update(videos)
+      .set({
+        views: sql`${videos.views} + ${viewDelta}`,
+      })
+      .where(eq(videos.id, videoId));
+  }
+
+  async applyViewEarningsPayout(
+    videoId: string,
+    settings: MonetizationSetting
+  ): Promise<void> {
+    const video = await this.getVideo(videoId);
+    if (!video) return;
+    
+    const creator = await this.getUser(video.creatorId);
+    if (!creator?.isMonetized) return;
+    
+    // Get or create view earnings record
+    const [existingEarnings] = await db
+      .select()
+      .from(videoViewEarnings)
+      .where(eq(videoViewEarnings.videoId, videoId))
+      .limit(1);
+    
+    // Calculate new views since last payout
+    const lastCalculatedViews = existingEarnings?.totalViews || 0;
+    const newViews = Math.max(0, video.views - lastCalculatedViews);
+    
+    if (newViews === 0) return;
+    
+    // Calculate earnings (0.1 FCFA per view)
+    const earningsPerViewFcfa = parseFloat(settings.pricePerViewFcfa);
+    const earningsPerViewUsd = parseFloat(settings.pricePerViewUsd);
+    const newEarningsFcfa = newViews * earningsPerViewFcfa;
+    const newEarningsUsd = newViews * earningsPerViewUsd;
+    
+    // Upsert video view earnings
+    if (existingEarnings) {
+      await db
+        .update(videoViewEarnings)
+        .set({
+          totalViews: video.views,
+          earningsFcfa: sql`${videoViewEarnings.earningsFcfa} + ${newEarningsFcfa}`,
+          earningsUsd: sql`${videoViewEarnings.earningsUsd} + ${newEarningsUsd}`,
+          lastCalculatedAt: new Date(),
+        })
+        .where(eq(videoViewEarnings.id, existingEarnings.id));
+    } else {
+      await db
+        .insert(videoViewEarnings)
+        .values({
+          videoId,
+          creatorId: video.creatorId,
+          totalViews: video.views,
+          earningsFcfa: newEarningsFcfa.toString(),
+          earningsUsd: newEarningsUsd.toString(),
+        });
+    }
+    
+    // Update user's view earnings
+    await db
+      .update(users)
+      .set({
+        viewEarnings: sql`${users.viewEarnings} + ${newEarningsUsd}`,
+        totalEarnings: sql`${users.totalEarnings} + ${newEarningsUsd}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, video.creatorId));
+  }
+
+  async getVideoViewEarnings(videoId: string): Promise<VideoViewEarning | undefined> {
+    const [earnings] = await db
+      .select()
+      .from(videoViewEarnings)
+      .where(eq(videoViewEarnings.videoId, videoId))
+      .limit(1);
+    
+    return earnings;
+  }
+
+  async getTotalViewEarnings(userId: string): Promise<string> {
+    const result = await db
+      .select({
+        total: sql<string>`COALESCE(SUM(${videoViewEarnings.earningsUsd}), 0)`,
+      })
+      .from(videoViewEarnings)
+      .where(eq(videoViewEarnings.creatorId, userId));
+    
+    return result[0]?.total || '0';
+  }
+
+  // Monetization Settings operations
+  async getMonetizationSettings(): Promise<MonetizationSetting> {
+    const [settings] = await db
+      .select()
+      .from(monetizationSettings)
+      .limit(1);
+    
+    if (!settings) {
+      // Create default settings if none exist
+      const [newSettings] = await db
+        .insert(monetizationSettings)
+        .values({
+          id: 'platform_settings',
+        })
+        .returning();
+      return newSettings;
+    }
+    
+    return settings;
+  }
+
+  async updateMonetizationSettings(
+    settingsUpdate: Partial<MonetizationSetting>
+  ): Promise<MonetizationSetting> {
+    const [updated] = await db
+      .update(monetizationSettings)
+      .set({ ...settingsUpdate, updatedAt: new Date() })
+      .where(eq(monetizationSettings.id, 'platform_settings'))
+      .returning();
+    
+    return updated;
+  }
+
+  async checkAndEnableMonetization(userId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user || user.isMonetized) return false;
+    
+    const settings = await this.getMonetizationSettings();
+    const followerCount = await this.getFollowerCount(userId);
+    
+    if (followerCount >= settings.minFollowersForMonetization) {
+      await db
+        .update(users)
+        .set({ isMonetized: true, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      
+      // Send notification
+      await this.createNotification({
+        userId,
+        type: 'monetization',
+        message: `Félicitations ! Votre compte est maintenant monétisé. Vous gagnez ${settings.pricePerViewFcfa} FCFA par vue !`,
+      });
+      
+      return true;
+    }
+    
+    return false;
   }
 }
 
