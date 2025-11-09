@@ -30,7 +30,7 @@ export default function SignupPage() {
   const onSubmit = async (data: RegisterInput) => {
     try {
       setIsLoading(true);
-      await apiRequest("/api/auth/register", "POST", data);
+      await apiRequest("POST", "/api/auth/register", data);
       
       toast({
         title: "Inscription réussie !",

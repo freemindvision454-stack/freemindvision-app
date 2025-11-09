@@ -27,7 +27,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginInput) => {
     try {
       setIsLoading(true);
-      await apiRequest("/api/auth/login", "POST", data);
+      await apiRequest("POST", "/api/auth/login", data);
       
       toast({
         title: "Connexion réussie !",
