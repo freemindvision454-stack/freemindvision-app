@@ -9,8 +9,15 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
+export function isReplitAuthEnabled(): boolean {
+  return !!(process.env.REPL_ID && process.env.SESSION_SECRET && process.env.DATABASE_URL);
+}
+
 const getOidcConfig = memoize(
   async () => {
+    if (!isReplitAuthEnabled()) {
+      throw new Error("Replit Auth is not enabled - missing required environment variables");
+    }
     return await client.discovery(
       new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
       process.env.REPL_ID!
@@ -64,6 +71,32 @@ async function upsertUser(
 }
 
 export async function setupAuth(app: Express) {
+  if (!isReplitAuthEnabled()) {
+    console.log("[AUTH] Replit Auth is disabled - missing REPL_ID or SESSION_SECRET or DATABASE_URL");
+    console.log("[AUTH] Running in guest mode without authentication");
+    
+    // Provide stub endpoints that return appropriate responses
+    app.get("/api/login", (_req, res) => {
+      res.status(503).json({ 
+        message: "Authentication is not available on this deployment",
+        guestMode: true 
+      });
+    });
+    
+    app.get("/api/callback", (_req, res) => {
+      res.status(503).json({ 
+        message: "Authentication is not available on this deployment",
+        guestMode: true 
+      });
+    });
+    
+    app.get("/api/logout", (_req, res) => {
+      res.redirect("/");
+    });
+    
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -133,7 +166,14 @@ export async function setupAuth(app: Express) {
   });
 }
 
+// Middleware for routes that only need to check IF user is authenticated
+// but can work without (like /api/auth/user)
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (!isReplitAuthEnabled()) {
+    // In guest mode, allow access - routes can check req.user themselves
+    return next();
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
@@ -160,4 +200,18 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
+};
+
+// Middleware for routes that REQUIRE authentication - blocks guest access
+export const requiresAuth: RequestHandler = async (req, res, next) => {
+  if (!isReplitAuthEnabled()) {
+    return res.status(401).json({ 
+      message: "Authentication is required for this action. Please deploy on Replit for full functionality.",
+      authRequired: true,
+      guestMode: true
+    });
+  }
+
+  // Use the same logic as isAuthenticated for actual auth check
+  return isAuthenticated(req, res, next);
 };

@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import express from "express";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, requiresAuth } from "./replitAuth";
 import multer from "multer";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -133,6 +133,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== AUTH ROUTES =====
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
+      // In guest mode (no auth), req.user will be undefined
+      if (!req.user || !req.user.claims) {
+        return res.json(null);
+      }
+      
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       res.json(user);
@@ -170,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // Upload video
   app.post(
     "/api/videos",
-    isAuthenticated,
+    requiresAuth,
     upload.fields([
       { name: "video", maxCount: 1 },
       { name: "thumbnail", maxCount: 1 },
@@ -278,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== LIKE ROUTES =====
 
   // Like a video
-  app.post("/api/videos/:videoId/like", isAuthenticated, async (req: any, res) => {
+  app.post("/api/videos/:videoId/like", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const like = await storage.likeVideo(userId, req.params.videoId);
@@ -308,7 +313,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Unlike a video
-  app.delete("/api/videos/:videoId/like", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/videos/:videoId/like", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await storage.unlikeVideo(userId, req.params.videoId);
@@ -322,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== FAVORITE ROUTES (TikTok-style bookmarks) =====
 
   // Favorite a video (bookmark/save)
-  app.post("/api/videos/:videoId/favorite", isAuthenticated, async (req: any, res) => {
+  app.post("/api/videos/:videoId/favorite", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const video = await storage.getVideo(req.params.videoId);
@@ -360,7 +365,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Unfavorite a video
-  app.delete("/api/videos/:videoId/favorite", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/videos/:videoId/favorite", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await storage.unfavoriteVideo(userId, req.params.videoId);
@@ -372,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Check if video is favorited by current user
-  app.get("/api/videos/:videoId/favorite/status", isAuthenticated, async (req: any, res) => {
+  app.get("/api/videos/:videoId/favorite/status", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const favorited = await storage.isVideoFavorited(userId, req.params.videoId);
@@ -386,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== VIDEO SHARE ROUTES (tracking) =====
 
   // Track video share event
-  app.post("/api/videos/:videoId/share", isAuthenticated, async (req: any, res) => {
+  app.post("/api/videos/:videoId/share", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const video = await storage.getVideo(req.params.videoId);
@@ -411,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== NOTIFICATION ROUTES =====
 
   // Get notifications for current user
-  app.get("/api/notifications", isAuthenticated, async (req: any, res) => {
+  app.get("/api/notifications", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const notifications = await storage.getNotifications(userId, 50);
@@ -423,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get unread notifications count
-  app.get("/api/notifications/unread/count", isAuthenticated, async (req: any, res) => {
+  app.get("/api/notifications/unread/count", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const count = await storage.getUnreadNotificationsCount(userId);
@@ -435,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Mark notification as read
-  app.patch("/api/notifications/:notificationId/read", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/notifications/:notificationId/read", requiresAuth, async (req: any, res) => {
     try {
       await storage.markNotificationAsRead(req.params.notificationId);
       res.json({ success: true });
@@ -446,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Mark all notifications as read
-  app.patch("/api/notifications/read-all", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/notifications/read-all", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       await storage.markAllNotificationsAsRead(userId);
@@ -460,7 +465,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== FOLLOW ROUTES =====
 
   // Follow a user
-  app.post("/api/users/:userId/follow", isAuthenticated, async (req: any, res) => {
+  app.post("/api/users/:userId/follow", requiresAuth, async (req: any, res) => {
     try {
       const followerId = req.user.claims.sub;
       const followingId = req.params.userId;
@@ -492,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Unfollow a user
-  app.delete("/api/users/:userId/follow", isAuthenticated, async (req: any, res) => {
+  app.delete("/api/users/:userId/follow", requiresAuth, async (req: any, res) => {
     try {
       const followerId = req.user.claims.sub;
       const followingId = req.params.userId;
@@ -506,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Check if following
-  app.get("/api/users/:userId/is-following", isAuthenticated, async (req: any, res) => {
+  app.get("/api/users/:userId/is-following", requiresAuth, async (req: any, res) => {
     try {
       const followerId = req.user.claims.sub;
       const followingId = req.params.userId;
@@ -537,7 +542,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get following feed (videos from followed creators)
-  app.get("/api/videos/following", isAuthenticated, async (req: any, res) => {
+  app.get("/api/videos/following", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const videos = await storage.getFollowingVideos(userId);
@@ -551,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== COMMENT ROUTES =====
 
   // Create comment
-  app.post("/api/comments", isAuthenticated, async (req: any, res) => {
+  app.post("/api/comments", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const comment = await storage.createComment({
@@ -599,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== MESSAGE ROUTES =====
 
   // Send a message
-  app.post("/api/messages", isAuthenticated, async (req: any, res) => {
+  app.post("/api/messages", requiresAuth, async (req: any, res) => {
     try {
       const senderId = req.user.claims.sub;
       const message = await storage.sendMessage({
@@ -615,7 +620,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Upload media and send message
-  app.post("/api/messages/media", isAuthenticated, uploadMessageMedia.single("media"), async (req: any, res) => {
+  app.post("/api/messages/media", requiresAuth, uploadMessageMedia.single("media"), async (req: any, res) => {
     try {
       const senderId = req.user.claims.sub;
       const { recipientId, content, messageType } = req.body;
@@ -654,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get conversations
-  app.get("/api/messages/conversations", isAuthenticated, async (req: any, res) => {
+  app.get("/api/messages/conversations", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const conversations = await storage.getConversations(userId);
@@ -666,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get messages with a specific user
-  app.get("/api/messages/:otherUserId", isAuthenticated, async (req: any, res) => {
+  app.get("/api/messages/:otherUserId", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const otherUserId = req.params.otherUserId;
@@ -679,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Mark messages as read
-  app.patch("/api/messages/:senderId/read", isAuthenticated, async (req: any, res) => {
+  app.patch("/api/messages/:senderId/read", requiresAuth, async (req: any, res) => {
     try {
       const recipientId = req.user.claims.sub;
       const senderId = req.params.senderId;
@@ -692,7 +697,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get unread messages count
-  app.get("/api/messages/unread/count", isAuthenticated, async (req: any, res) => {
+  app.get("/api/messages/unread/count", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const count = await storage.getUnreadMessagesCount(userId);
@@ -704,7 +709,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get online users
-  app.get("/api/users/online", isAuthenticated, async (req: any, res) => {
+  app.get("/api/users/online", requiresAuth, async (req: any, res) => {
     try {
       const onlineUserIds = getOnlineUsers();
       res.json({ onlineUsers: onlineUserIds });
@@ -715,7 +720,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Check if specific user is online
-  app.get("/api/users/:userId/online", isAuthenticated, async (req: any, res) => {
+  app.get("/api/users/:userId/online", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.params.userId;
       const online = isUserOnline(userId);
@@ -740,7 +745,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Send a gift
-  app.post("/api/gifts/send", isAuthenticated, async (req: any, res) => {
+  app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
     try {
       const senderId = req.user.claims.sub;
       const { giftTypeId, recipientId, videoId, quantity } = req.body;
@@ -794,7 +799,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Create Stripe payment intent for credit purchase
-  app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
+  app.post("/api/create-payment-intent", requiresAuth, async (req: any, res) => {
     try {
       if (!stripe) {
         return res.status(503).json({ message: "Payment processing not configured. Please add Stripe API keys." });
@@ -918,7 +923,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Initiate Mobile Money payment
-  app.post("/api/mobile-money/initiate", isAuthenticated, async (req: any, res) => {
+  app.post("/api/mobile-money/initiate", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { packageId, provider, phoneNumber } = req.body;
@@ -964,7 +969,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Purchase credits (fallback for testing/development)
-  app.post("/api/credits/purchase", isAuthenticated, async (req: any, res) => {
+  app.post("/api/credits/purchase", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { packageId, paymentMethod = "test" } = req.body;
@@ -1002,7 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== DASHBOARD ROUTES =====
 
   // Get dashboard stats
-  app.get("/api/dashboard/stats", isAuthenticated, async (req: any, res) => {
+  app.get("/api/dashboard/stats", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const stats = await storage.getDashboardStats(userId);
@@ -1014,7 +1019,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get creator videos with stats
-  app.get("/api/dashboard/videos", isAuthenticated, async (req: any, res) => {
+  app.get("/api/dashboard/videos", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const videos = await storage.getCreatorVideosWithStats(userId);
@@ -1074,7 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get user's shares
-  app.get("/api/shares/my-shares", isAuthenticated, async (req: any, res) => {
+  app.get("/api/shares/my-shares", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const userShares = await storage.getUserShares(userId);
@@ -1104,7 +1109,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get user's share transactions
-  app.get("/api/shares/my-transactions", isAuthenticated, async (req: any, res) => {
+  app.get("/api/shares/my-transactions", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const transactions = await storage.getUserShareTransactions(userId);
@@ -1128,7 +1133,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Purchase shares
-  app.post("/api/shares/purchase", isAuthenticated, async (req: any, res) => {
+  app.post("/api/shares/purchase", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { quantity } = req.body;
@@ -1243,7 +1248,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   // ===== REFERRAL ROUTES =====
 
   // Get current user's referral code
-  app.get("/api/referral/code", isAuthenticated, async (req: any, res) => {
+  app.get("/api/referral/code", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const code = await storage.getUserReferralCode(userId);
@@ -1255,7 +1260,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get referral stats for current user
-  app.get("/api/referral/stats", isAuthenticated, async (req: any, res) => {
+  app.get("/api/referral/stats", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const stats = await storage.getReferralStats(userId);
@@ -1267,7 +1272,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Get all referrals for current user
-  app.get("/api/referral/list", isAuthenticated, async (req: any, res) => {
+  app.get("/api/referral/list", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const referrals = await storage.getReferralsByReferrer(userId);
@@ -1279,7 +1284,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Apply a referral code (use someone's code)
-  app.post("/api/referral/apply", isAuthenticated, async (req: any, res) => {
+  app.post("/api/referral/apply", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { referralCode } = req.body;
@@ -1369,7 +1374,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
   });
 
   // Check and award badges for current user
-  app.post("/api/badges/check", isAuthenticated, async (req: any, res) => {
+  app.post("/api/badges/check", requiresAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const newBadges = await storage.checkAndAwardBadges(userId);
