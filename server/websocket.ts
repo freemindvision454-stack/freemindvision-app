@@ -11,63 +11,42 @@ const onlineUsers = new Map<string, Set<WebSocket>>();
 
 export function setupWebSocket(server: Server) {
   const wss = new WebSocketServer({ 
-    noServer: true
-  });
-
-  // Handle upgrade from Express with session data
-  server.on('upgrade', (request, socket, head) => {
-    if (request.url !== '/ws') {
-      return;
-    }
-
-    // Session is already parsed by express-session middleware
-    const session = (request as any).session;
-    const userId = session?.passport?.user?.claims?.sub;
-
-    if (!userId) {
-      console.log('[WebSocket] Rejected unauthenticated connection');
-      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-      socket.destroy();
-      return;
-    }
-
-    // Store userId in request for later use
-    (request as any).userId = userId;
-
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
+    server,
+    path: '/ws'
   });
 
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-    // Get authenticated userId from request
-    const userId = (req as any).userId as string;
-    console.log(`[WebSocket] User ${userId} connected (authenticated)`);
+    console.log('[WebSocket] New connection');
     
-    // Add user to online users
-    if (!onlineUsers.has(userId)) {
-      onlineUsers.set(userId, new Set());
-    }
-    onlineUsers.get(userId)!.add(ws);
-    
-    console.log(`[WebSocket] Total online users: ${onlineUsers.size}`);
-    
-    // Broadcast online status to all clients
-    broadcastUserStatus(userId, 'online');
-    
-    // Send acknowledgment with online users list
-    ws.send(JSON.stringify({ 
-      type: 'auth_success',
-      userId,
-      onlineUsers: Array.from(onlineUsers.keys())
-    }));
+    let userId: string | null = null;
 
     ws.on('message', (message: string) => {
       try {
         const data = JSON.parse(message.toString());
         
-        // Handle other message types here if needed (e.g., typing indicators)
-        console.log('[WebSocket] Received message:', data.type);
+        if (data.type === 'auth' && data.userId) {
+          // Simple authentication - client sends userId
+          // TODO: Add proper token-based authentication
+          userId = data.userId as string;
+          
+          // Add user to online users
+          if (!onlineUsers.has(userId)) {
+            onlineUsers.set(userId, new Set());
+          }
+          onlineUsers.get(userId)!.add(ws);
+          
+          console.log(`[WebSocket] User ${userId} authenticated. Total online: ${onlineUsers.size}`);
+          
+          // Broadcast online status to all clients
+          broadcastUserStatus(userId, 'online');
+          
+          // Send acknowledgment with online users list
+          ws.send(JSON.stringify({ 
+            type: 'auth_success',
+            userId,
+            onlineUsers: Array.from(onlineUsers.keys())
+          }));
+        }
       } catch (error) {
         console.error('[WebSocket] Error parsing message:', error);
       }
