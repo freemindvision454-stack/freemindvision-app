@@ -19,6 +19,10 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [birthDay, setBirthDay] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -34,6 +38,36 @@ export default function SignupPage() {
       gender: undefined,
     },
   });
+
+  const updateDateOfBirth = (day: string, month: string, year: string) => {
+    setBirthDay(day);
+    setBirthMonth(month);
+    setBirthYear(year);
+    
+    if (day && month && year) {
+      const formattedMonth = month.padStart(2, '0');
+      const formattedDay = day.padStart(2, '0');
+      const dateString = `${year}-${formattedMonth}-${formattedDay}`;
+      
+      const date = new Date(dateString);
+      const isValidDate = date.getFullYear() === parseInt(year) && 
+                         date.getMonth() === parseInt(month) - 1 && 
+                         date.getDate() === parseInt(day);
+      
+      if (isValidDate) {
+        form.setValue("dateOfBirth", dateString, { shouldValidate: true });
+        form.clearErrors("dateOfBirth");
+      } else {
+        form.setValue("dateOfBirth", "", { shouldValidate: true });
+        form.setError("dateOfBirth", { 
+          type: "manual", 
+          message: "Date invalide. Vérifiez le jour et le mois sélectionnés." 
+        });
+      }
+    } else {
+      form.setValue("dateOfBirth", "", { shouldValidate: true });
+    }
+  };
 
   const onSubmit = async (data: RegisterInput) => {
     try {
@@ -192,25 +226,77 @@ export default function SignupPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <FormField
                   control={form.control}
                   name="dateOfBirth"
-                  render={({ field }) => (
+                  render={() => (
                     <FormItem>
                       <FormLabel>Date de naissance</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="date"
+                      <div className="grid grid-cols-3 gap-2">
+                        <Select 
+                          value={birthDay} 
+                          onValueChange={(day) => updateDateOfBirth(day, birthMonth, birthYear)} 
                           disabled={isLoading}
-                          data-testid="input-dob"
-                        />
-                      </FormControl>
+                        >
+                          <SelectTrigger data-testid="select-birth-day">
+                            <SelectValue placeholder="Jour" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                              <SelectItem key={day} value={day.toString()} data-testid={`option-day-${day}`}>
+                                {day}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select 
+                          value={birthMonth} 
+                          onValueChange={(month) => updateDateOfBirth(birthDay, month, birthYear)} 
+                          disabled={isLoading}
+                        >
+                          <SelectTrigger data-testid="select-birth-month">
+                            <SelectValue placeholder="Mois" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1" data-testid="option-month-1">Janvier</SelectItem>
+                            <SelectItem value="2" data-testid="option-month-2">Février</SelectItem>
+                            <SelectItem value="3" data-testid="option-month-3">Mars</SelectItem>
+                            <SelectItem value="4" data-testid="option-month-4">Avril</SelectItem>
+                            <SelectItem value="5" data-testid="option-month-5">Mai</SelectItem>
+                            <SelectItem value="6" data-testid="option-month-6">Juin</SelectItem>
+                            <SelectItem value="7" data-testid="option-month-7">Juillet</SelectItem>
+                            <SelectItem value="8" data-testid="option-month-8">Août</SelectItem>
+                            <SelectItem value="9" data-testid="option-month-9">Septembre</SelectItem>
+                            <SelectItem value="10" data-testid="option-month-10">Octobre</SelectItem>
+                            <SelectItem value="11" data-testid="option-month-11">Novembre</SelectItem>
+                            <SelectItem value="12" data-testid="option-month-12">Décembre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select 
+                          value={birthYear} 
+                          onValueChange={(year) => updateDateOfBirth(birthDay, birthMonth, year)} 
+                          disabled={isLoading}
+                        >
+                          <SelectTrigger data-testid="select-birth-year">
+                            <SelectValue placeholder="Année" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - 13 - i).map((year) => (
+                              <SelectItem key={year} value={year.toString()} data-testid={`option-year-${year}`}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name="gender"

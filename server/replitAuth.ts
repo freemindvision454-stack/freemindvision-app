@@ -71,8 +71,11 @@ async function upsertUser(
 }
 
 export async function setupAuth(app: Express) {
-  if (!isReplitAuthEnabled()) {
-    console.log("[AUTH] Replit Auth is disabled - missing REPL_ID or SESSION_SECRET or DATABASE_URL");
+  const hasDatabase = !!(process.env.SESSION_SECRET && process.env.DATABASE_URL);
+  const hasReplitAuth = isReplitAuthEnabled();
+
+  if (!hasDatabase) {
+    console.log("[AUTH] No session config - missing SESSION_SECRET or DATABASE_URL");
     console.log("[AUTH] Running in guest mode without authentication");
     
     // Provide stub endpoints that return appropriate responses
@@ -101,6 +104,12 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+
+  if (!hasReplitAuth) {
+    console.log("[AUTH] Replit Auth disabled - REPL_ID not found");
+    console.log("[AUTH] Using local authentication only (email/password)");
+    return;
+  }
 
   const config = await getOidcConfig();
 
