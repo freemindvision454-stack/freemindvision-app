@@ -11,12 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
+import { useAuthConfig } from "@/hooks/use-auth-config";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { data: authConfig } = useAuthConfig();
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -131,28 +133,32 @@ export default function LoginPage() {
                 Se connecter
               </Button>
 
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Ou continuer avec
-                  </span>
-                </div>
-              </div>
+              {authConfig?.replitAuthEnabled && (
+                <>
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Ou continuer avec
+                      </span>
+                    </div>
+                  </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => window.location.href = "/api/login"}
-                disabled={isLoading}
-                data-testid="button-google-login"
-              >
-                <SiGoogle className="mr-2 h-4 w-4" />
-                Google
-              </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => window.location.href = "/api/login"}
+                    disabled={isLoading}
+                    data-testid="button-google-login"
+                  >
+                    <SiGoogle className="mr-2 h-4 w-4" />
+                    Google
+                  </Button>
+                </>
+              )}
 
               <div className="text-center text-sm">
                 Pas encore de compte ?{" "}
