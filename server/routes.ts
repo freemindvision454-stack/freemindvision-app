@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import express from "express";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requiresAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated, requiresAuth, isReplitAuthEnabled } from "./replitAuth";
 import { setupLocalStrategy } from "./auth/localStrategy";
 import multer from "multer";
 import path from "path";
@@ -114,6 +114,13 @@ export async function registerRoutes(app: Express): Promise<Express> {
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       uptime: process.uptime()
+    });
+  });
+
+  // Auth configuration endpoint (before auth middleware setup)
+  app.get("/api/auth/config", (_req: Request, res: Response) => {
+    res.json({
+      replitAuthEnabled: isReplitAuthEnabled(),
     });
   });
 
