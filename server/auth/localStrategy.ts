@@ -37,8 +37,8 @@ export function setupLocalStrategy() {
             profileImageUrl: user.profileImageUrl,
             bio: user.bio,
             isCreator: user.isCreator,
-            creditBalance: user.creditBalance,
-            totalEarnings: user.totalEarnings,
+            creditBalance: typeof user.creditBalance === 'string' ? parseInt(user.creditBalance) : user.creditBalance,
+            totalEarnings: typeof user.totalEarnings === 'string' ? parseFloat(user.totalEarnings) : user.totalEarnings,
             currency: user.currency,
             referralCode: user.referralCode,
             authProvider: "local",
@@ -46,6 +46,8 @@ export function setupLocalStrategy() {
           
           return done(null, sessionUser);
         } catch (error) {
+          console.error("❌ Local strategy error:", error);
+          console.error("Email attempted:", email);
           return done(error);
         }
       }

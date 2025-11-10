@@ -9,12 +9,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -90,13 +92,29 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Mot de passe</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="••••••••••••"
-                        disabled={isLoading}
-                        data-testid="input-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          {...field}
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••••••"
+                          disabled={isLoading}
+                          data-testid="input-password"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => setShowPassword(!showPassword)}
+                          disabled={isLoading}
+                          data-testid="button-toggle-password"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -113,17 +131,39 @@ export default function LoginPage() {
                 Se connecter
               </Button>
 
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Ou continuer avec
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => window.location.href = "/api/login"}
+                disabled={isLoading}
+                data-testid="button-google-login"
+              >
+                <SiGoogle className="mr-2 h-4 w-4" />
+                Google
+              </Button>
+
               <div className="text-center text-sm">
                 Pas encore de compte ?{" "}
-                <Button
+                <button
                   type="button"
-                  variant="link"
-                  className="p-0 h-auto font-normal"
+                  className="text-primary hover:underline font-normal"
                   onClick={() => setLocation("/signup")}
                   data-testid="link-signup"
                 >
                   S'inscrire
-                </Button>
+                </button>
               </div>
             </form>
           </Form>
