@@ -88,3 +88,5 @@ Comprehensive APIs cover:
 - **Extended User Registration**: Added 5 optional signup fields (phoneNumber, dateOfBirth, country, city, gender) for email/password registrations
 - **Migration System**: Implemented automated baseline migration (0000_special_smiling_tiger.sql) that creates all 25 tables from scratch
 - **Render Configuration**: Fixed build failures by adding NPM_CONFIG_PRODUCTION=false and MIGRATIONS_AUTO_RUN=true to environment variables
+- **UX Improvement - Date Picker**: Replaced text-based date input with Google-style 3-dropdown selector (Day/Month/Year) for better mobile UX. Includes client-side validation for invalid dates (e.g., 31 February) with error messages, and enforces minimum age of 13 years.
+- **Passport.js Fix**: Corrected authentication initialization to support both Replit (OIDC) and production (email/password) environments. Passport now initializes whenever SESSION_SECRET and DATABASE_URL are present, fixing "req.login is not a function" error on Render deployments.

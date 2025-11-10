@@ -55,17 +55,20 @@ export default function SignupPage() {
                          date.getDate() === parseInt(day);
       
       if (isValidDate) {
-        form.setValue("dateOfBirth", dateString, { shouldValidate: true });
+        form.setValue("dateOfBirth", dateString, { shouldValidate: false });
         form.clearErrors("dateOfBirth");
       } else {
-        form.setValue("dateOfBirth", "", { shouldValidate: true });
-        form.setError("dateOfBirth", { 
-          type: "manual", 
-          message: "Date invalide. Vérifiez le jour et le mois sélectionnés." 
-        });
+        form.setValue("dateOfBirth", "invalid", { shouldValidate: false });
+        setTimeout(() => {
+          form.setError("dateOfBirth", { 
+            type: "manual", 
+            message: "Date invalide. Vérifiez le jour et le mois sélectionnés." 
+          });
+        }, 0);
       }
     } else {
-      form.setValue("dateOfBirth", "", { shouldValidate: true });
+      form.setValue("dateOfBirth", "", { shouldValidate: false });
+      form.clearErrors("dateOfBirth");
     }
   };
 
