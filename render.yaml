@@ -3,14 +3,12 @@ services:
     name: freemind-vision
     env: node
     region: frankfurt
-    plan: starter
-    buildCommand: npm ci && npm run build
-    startCommand: node start-prod.js
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 5000
       - key: DATABASE_URL
         sync: false
       - key: SESSION_SECRET
