@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { DollarSign, TrendingUp, Eye, Heart, Video, Gift, Download, CheckCircle2, XCircle, Users } from "lucide-react";
 import type { User, Video as VideoType } from "@shared/schema";
 
@@ -100,21 +101,21 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          <Card className="hover-elevate transition-all">
+          <Card className="hover-elevate transition-all" data-testid="card-gift-earnings">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Earnings
+                Gains de Cadeaux
               </CardTitle>
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-primary" />
+                <Gift className="w-5 h-5 text-primary" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl md:text-3xl font-poppins font-bold text-primary" data-testid="text-total-earnings">
+              <div className="text-2xl md:text-3xl font-poppins font-bold text-primary" data-testid="text-gift-earnings-amount">
                 {formatCurrency(displayEarnings, currency)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                60% of all gifts received
+                60% de tous les cadeaux reçus
               </p>
             </CardContent>
           </Card>
@@ -176,22 +177,28 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover-elevate transition-all border-blue-500/20">
+          <Card className="hover-elevate transition-all border-blue-500/20" data-testid="card-view-earnings">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                View Earnings
+                Gains des Vues
               </CardTitle>
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
+                <Eye className="w-5 h-5 text-blue-500" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl md:text-3xl font-poppins font-bold text-blue-600" data-testid="text-view-earnings">
+              <div className="text-2xl md:text-3xl font-poppins font-bold text-blue-600" data-testid="text-view-earnings-amount">
                 {formatCurrency(viewEarnings, "FCFA")}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                0.1 FCFA per view
-              </p>
+              {!isMonetized ? (
+                <p className="text-xs text-muted-foreground mt-1" data-testid="text-view-earnings-disabled">
+                  Disponible après 7 000 abonnés
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">
+                  0,1 FCFA par vue
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -216,7 +223,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-4">
               {/* Followers Progress */}
-              <div className="space-y-2" data-testid="monetization-progress">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
@@ -226,16 +233,11 @@ export default function Dashboard() {
                     {followerCount.toLocaleString()} / {monetizationThreshold.toLocaleString()}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      isMonetized ? "bg-green-500" : "bg-primary"
-                    }`}
-                    style={{
-                      width: `${Math.min((followerCount / monetizationThreshold) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
+                <Progress 
+                  value={Math.min((followerCount / monetizationThreshold) * 100, 100)} 
+                  className={isMonetized ? "bg-muted [&>div]:bg-green-500" : ""}
+                  data-testid="progress-monetization"
+                />
               </div>
 
               {/* Status Message */}
@@ -245,7 +247,6 @@ export default function Dashboard() {
                     ? "bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900"
                     : "bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900"
                 }`}
-                data-testid="monetization-status-message"
               >
                 {isMonetized ? (
                   <div className="flex items-start gap-3">
@@ -254,8 +255,8 @@ export default function Dashboard() {
                       <div className="font-semibold text-green-900 dark:text-green-100 mb-1">
                         Monétisation Active
                       </div>
-                      <p className="text-sm text-green-800 dark:text-green-200">
-                        Vous gagnez <strong>0.1 FCFA par vue</strong> sur vos vidéos. Les earnings sont calculés automatiquement et ajoutés à votre compte.
+                      <p className="text-sm text-green-800 dark:text-green-200" data-testid="text-monetization-success">
+                        Vous gagnez <strong>0,1 FCFA par vue</strong> sur vos vidéos. Les earnings sont calculés automatiquement et ajoutés à votre compte.
                       </p>
                     </div>
                   </div>
@@ -266,8 +267,8 @@ export default function Dashboard() {
                       <div className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
                         Pas Encore Monétisé
                       </div>
-                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                        Atteignez <strong>{(monetizationThreshold - followerCount).toLocaleString()} abonnés supplémentaires</strong> pour activer la monétisation automatique et commencer à gagner 0.1 FCFA par vue.
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200" data-testid="text-monetization-explanation">
+                        Atteignez <strong>{(monetizationThreshold - followerCount).toLocaleString()} abonnés supplémentaires</strong> pour activer la monétisation automatique et commencer à gagner 0,1 FCFA par vue.
                       </p>
                     </div>
                   </div>
