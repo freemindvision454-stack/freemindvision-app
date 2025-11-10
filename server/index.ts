@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupWebSocket } from "./websocket";
+import { runMigrations } from "./migrate";
 
 const app = express();
 
@@ -55,7 +56,11 @@ app.use((req, res, next) => {
     console.log(`[STARTUP] PORT: ${process.env.PORT || '5000'}`);
     log(`Starting server in ${nodeEnv} mode...`);
     
-    // Register all routes first
+    // Run database migrations first
+    await runMigrations();
+    log(`Database migrations completed`);
+    
+    // Register all routes
     await registerRoutes(app);
     log(`Routes registered successfully`);
 
