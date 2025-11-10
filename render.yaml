@@ -1,14 +1,19 @@
 services:
   - type: web
     name: freemind-vision
+    runtime: node
     env: node
     region: frankfurt
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: false
+      - key: MIGRATIONS_AUTO_RUN
+        value: true
       - key: DATABASE_URL
         sync: false
       - key: SESSION_SECRET

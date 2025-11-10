@@ -82,3 +82,9 @@ Comprehensive APIs cover:
 - **Stripe**: For credit/debit card payment processing.
 - **Mobile Money Providers**: Integrations for Orange Money, MTN Money, Wave.
 - **Bank Transfer Systems**: Integration with banking systems (e.g., ECO BANQUE).
+
+## Recent Changes (Nov 10, 2025)
+
+- **Extended User Registration**: Added 5 optional signup fields (phoneNumber, dateOfBirth, country, city, gender) for email/password registrations
+- **Migration System**: Implemented automated baseline migration (0000_special_smiling_tiger.sql) that creates all 25 tables from scratch
+- **Render Configuration**: Fixed build failures by adding NPM_CONFIG_PRODUCTION=false and MIGRATIONS_AUTO_RUN=true to environment variables
