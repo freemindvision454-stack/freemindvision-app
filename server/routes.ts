@@ -1890,6 +1890,42 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   };
 
+  // TEMP: Delete user by email (requires admin secret)
+  app.post("/api/admin/delete-user-by-email", async (req: Request, res: Response) => {
+    try {
+      const { email, adminSecret } = req.body;
+      
+      // Require admin secret for security
+      const expectedSecret = process.env.ADMIN_SECRET || "FreeMindVision2024!Admin";
+      
+      if (!adminSecret || adminSecret !== expectedSecret) {
+        return res.status(403).json({ message: "Invalid admin secret" });
+      }
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Find and delete user
+      const user = await storage.findUserByEmail(email);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found with this email" });
+      }
+      
+      // Delete user from database
+      await db.delete(users).where(eq(users.email, email.toLowerCase()));
+      
+      res.json({ 
+        message: "User deleted successfully",
+        deletedEmail: email 
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Process view earnings batch job
   app.post("/api/admin/process-view-earnings", requiresAuth, requiresAdmin, async (req: any, res) => {
     try {
