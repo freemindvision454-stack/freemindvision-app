@@ -184,8 +184,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
         profileImageUrl: user.profileImageUrl,
         bio: user.bio,
         isCreator: user.isCreator,
-        creditBalance: user.creditBalance,
-        totalEarnings: user.totalEarnings,
+        creditBalance: user.creditBalance.toString(),
+        totalEarnings: user.totalEarnings.toString(),
         currency: user.currency,
         referralCode: user.referralCode,
         authProvider: "local",
@@ -980,7 +980,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Create payment intent
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(pkg.priceUsd * 100), // Convert to cents
+        amount: Math.round(parseFloat(pkg.priceUsd) * 100), // Convert to cents (priceUsd is string from DB)
         currency: "usd",
         customer: customerId,
         metadata: {
@@ -1135,26 +1135,27 @@ export async function registerRoutes(app: Express): Promise<Express> {
         
         if (invoice.subscription) {
           try {
-            const subscriptionResponse = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            // Stripe SDK v16+ returns Response<Subscription>, destructure to get data
+            const { data: subscription } = await stripe.subscriptions.retrieve(invoice.subscription as string);
             
             // Update subscription period and record payment
             await storage.updateSubscriptionStatus(
-              subscriptionResponse.id,
-              subscriptionResponse.status,
-              new Date(subscriptionResponse.current_period_end * 1000)
+              subscription.id,
+              subscription.status,
+              new Date(subscription.current_period_end * 1000)
             );
 
             // Record subscription payment transaction
             const userSub = await db
               .select()
               .from(userSubscriptions)
-              .where(eq(userSubscriptions.stripeSubscriptionId, subscriptionResponse.id))
+              .where(eq(userSubscriptions.stripeSubscriptionId, subscription.id))
               .limit(1);
 
             if (userSub.length > 0) {
               await storage.recordSubscriptionPayment(
                 userSub[0].userId,
-                subscriptionResponse.id,
+                subscription.id,
                 (invoice.amount_paid / 100).toString()
               );
             }
@@ -1338,8 +1339,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
       const totalShares = await storage.getTotalUserShares(userId);
       const currentPrice = await storage.getCurrentSharePrice();
       
-      const totalInvested = userShares.reduce((sum, share) => sum + share.totalCost, 0);
-      const currentValue = totalShares * (currentPrice?.priceUsd || 108);
+      // Convert string values to numbers for calculations (DB numeric fields are strings)
+      const totalInvested = userShares.reduce((sum, share) => sum + parseFloat(share.totalCost), 0);
+      const currentValue = totalShares * parseFloat(currentPrice?.priceUsd || "108");
       const profitLoss = currentValue - totalInvested;
       const profitLossPercentage = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
 
@@ -1396,7 +1398,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       // Get current price
       const currentPrice = await storage.getCurrentSharePrice();
-      const pricePerShare = currentPrice?.priceUsd || 108;
+      const pricePerShare = parseFloat(currentPrice?.priceUsd || "108");
       const totalAmount = pricePerShare * quantity;
 
       // Create share transaction
@@ -1404,8 +1406,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
         userId,
         type: "purchase",
         quantity,
-        pricePerShare,
-        totalAmount,
+        pricePerShare: pricePerShare.toString(),
+        totalAmount: totalAmount.toString(),
         status: "pending",
         paymentMethod: "stripe",
       });
@@ -1952,8 +1954,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
       // Get monetization settings
       const settings = await storage.getMonetizationSettings();
 
-      // Get all videos from monetized creators (with pagination)
-      const allVideos = await storage.getAllVideos();
+      // Get all videos from monetized creators
+      const allVideos = await storage.getVideos(10000); // Get up to 10k videos for batch processing
       
       // Filter videos from monetized creators
       const monetizedVideos = [];

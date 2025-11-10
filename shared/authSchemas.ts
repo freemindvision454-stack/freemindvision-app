@@ -73,6 +73,7 @@ export const loginSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>;
 
 // Session user type (no password!)
+// Note: creditBalance and totalEarnings are strings because PostgreSQL numeric returns string
 export type SessionUser = {
   id: string;
   email: string | null;
@@ -81,8 +82,8 @@ export type SessionUser = {
   profileImageUrl: string | null;
   bio: string | null;
   isCreator: boolean;
-  creditBalance: number;
-  totalEarnings: number;
+  creditBalance: string;
+  totalEarnings: string;
   currency: string;
   referralCode: string | null;
   authProvider: "local" | "replit";
