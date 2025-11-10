@@ -30,7 +30,7 @@ The platform features a modern, vibrant, and responsive design, inspired by TikT
 ### Technical Implementations
 - **Frontend**: Developed with **React** and **TypeScript**, using **Wouter** for routing, **TanStack Query** for data fetching, and **React Hook Form** with Zod for form validation.
 - **Backend**: Built on **Express.js** with **TypeScript**, utilizing **Drizzle ORM** for type-safe PostgreSQL interactions and **Multer** for file uploads. **Passport.js** manages session authentication.
-- **Authentication**: A **hybrid system** supports both Replit Auth (Google, GitHub, Email via OIDC) and a standalone email/password system (Bcrypt, Passport Local Strategy, Zod validation, rate limiting).
+- **Authentication**: A **hybrid system** supports both Replit Auth (Google, GitHub, Email via OIDC) and a standalone email/password system (Bcrypt, Passport Local Strategy, Zod validation, rate limiting). Both login and signup pages feature password visibility toggle buttons (Eye/EyeOff icons) for improved UX.
 - **Video Platform**: Supports vertical video uploads with real-time preview, 7 filters, 3 speed controls, FreeMind Vision branding, and full localization.
 - **Monetization**: Implements a comprehensive monetization ecosystem:
   - **Virtual Currency**: YimiCoins system with credit packages and virtual gifts (60/40 revenue split favoring creators)
