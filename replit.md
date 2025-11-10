@@ -30,7 +30,7 @@ The platform features a modern, vibrant, and responsive design, inspired by TikT
 ### Technical Implementations
 - **Frontend**: Developed with **React** and **TypeScript**, using **Wouter** for routing, **TanStack Query** for data fetching, and **React Hook Form** with Zod for form validation.
 - **Backend**: Built on **Express.js** with **TypeScript**, utilizing **Drizzle ORM** for type-safe PostgreSQL interactions and **Multer** for file uploads. **Passport.js** manages session authentication.
-- **Authentication**: A **hybrid system** supports both Replit Auth (Google, GitHub, Email via OIDC) and a standalone email/password system (Bcrypt, Passport Local Strategy, Zod validation, rate limiting). Both login and signup pages feature password visibility toggle buttons (Eye/EyeOff icons) for improved UX.
+- **Authentication**: A **hybrid system** supports both Replit Auth (Google, GitHub, Email via OIDC) and a standalone email/password system (Bcrypt, Passport Local Strategy, Zod validation, rate limiting). Email/password signups collect extended profile data (phone, date of birth, country, city, gender) while OAuth signups skip these fields (all nullable in DB). Both login and signup pages feature password visibility toggle buttons (Eye/EyeOff icons) for improved UX.
 - **Video Platform**: Supports vertical video uploads with real-time preview, 7 filters, 3 speed controls, FreeMind Vision branding, and full localization.
 - **Monetization**: Implements a comprehensive monetization ecosystem:
   - **Virtual Currency**: YimiCoins system with credit packages and virtual gifts (60/40 revenue split favoring creators)
@@ -49,10 +49,11 @@ The platform features a modern, vibrant, and responsive design, inspired by TikT
 
 ### Core System Design
 - **Database**: **PostgreSQL** managed by **Drizzle ORM**, with intelligent driver selection (Neon WebSocket for Neon, standard pg for others). Schema includes:
-  - **Users**: Extended with isAdmin, isMonetized (auto at 7k followers), viewEarnings tracking
+  - **Users**: Extended with isAdmin, isMonetized (auto at 7k followers), viewEarnings tracking, and 5 optional signup fields (phoneNumber, dateOfBirth, country, city, gender) for email/password registrations
   - **Videos**: View counts for earnings calculation
   - **Monetization**: subscription_plans, user_subscriptions, verified_badge_purchases, monetization_settings, video_view_earnings
   - **Social**: shares, notifications, badges, referrals
+- **Migration System**: Automated database migrations using Drizzle Migrator with advisory lock protection, journal-based idempotence (__drizzle_migrations table), and MIGRATIONS_AUTO_RUN env var gating for production safety
 - **Revenue Model**: Creators receive 60% of gift value, platform retains 40%. View-based earnings: 0.1 FCFA per view for monetized creators.
 - **Equity Model**: Platform shares are $108 each (total valuation $1,080,000 for 10,000 shares), with tracked price history.
 - **Admin System**: Role-based access control with isAdmin flag and optional shared-secret header authentication for administrative tasks.

@@ -25,8 +25,7 @@ export async function runMigrations() {
   
   try {
     // Vérifier si les migrations automatiques sont activées
-    // TEMPORAIRE: Forcé à true pour test local
-    const autoRunEnabled = process.env.MIGRATIONS_AUTO_RUN === 'true' || process.env.NODE_ENV === 'development';
+    const autoRunEnabled = process.env.MIGRATIONS_AUTO_RUN === 'true';
     
     if (!autoRunEnabled) {
       console.log("[MIGRATION] ⏭️  MIGRATIONS_AUTO_RUN non activé - migration ignorée");
