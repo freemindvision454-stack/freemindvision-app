@@ -77,7 +77,17 @@ export interface IStorage {
   
   // Local authentication operations
   findUserByEmail(email: string): Promise<User | undefined>;
-  createUserWithPassword(user: { email: string; password: string; firstName: string; lastName: string }): Promise<User>;
+  createUserWithPassword(user: { 
+    email: string; 
+    password: string; 
+    firstName: string; 
+    lastName: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    country?: string;
+    city?: string;
+    gender?: "male" | "female";
+  }): Promise<User>;
   verifyPassword(user: User, password: string): Promise<boolean>;
 
   // Video operations
@@ -241,7 +251,12 @@ export class DatabaseStorage implements IStorage {
     email: string; 
     password: string; 
     firstName: string; 
-    lastName: string 
+    lastName: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    country?: string;
+    city?: string;
+    gender?: "male" | "female";
   }): Promise<User> {
     // Hash password with bcrypt (cost factor 12 for production security)
     const hashedPassword = await bcrypt.hash(userData.password, 12);
@@ -254,6 +269,11 @@ export class DatabaseStorage implements IStorage {
         password: hashedPassword,
         firstName: userData.firstName,
         lastName: userData.lastName,
+        phoneNumber: userData.phoneNumber,
+        dateOfBirth: userData.dateOfBirth,
+        country: userData.country,
+        city: userData.city,
+        gender: userData.gender,
         isCreator: false,
         creditBalance: 0,
         totalEarnings: 0,

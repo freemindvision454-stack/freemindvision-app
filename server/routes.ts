@@ -147,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
         });
       }
       
-      const { email, password, firstName, lastName } = result.data;
+      const { email, password, firstName, lastName, phoneNumber, dateOfBirth, country, city, gender } = result.data;
       
       // Check if email already exists
       const existingUser = await storage.findUserByEmail(email);
@@ -161,6 +161,11 @@ export async function registerRoutes(app: Express): Promise<Express> {
         password,
         firstName,
         lastName,
+        phoneNumber,
+        dateOfBirth,
+        country,
+        city,
+        gender,
       });
       
       // Auto-login after registration

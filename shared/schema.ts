@@ -12,6 +12,7 @@ import {
   real,
   numeric,
   uniqueIndex,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -34,6 +35,11 @@ export const users = pgTable("users", {
   password: varchar("password"), // Hashed password for email/password authentication (null for OAuth users)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  phoneNumber: varchar("phone_number"), // Phone number for contact
+  dateOfBirth: date("date_of_birth"), // Date of birth
+  country: varchar("country"), // Country of residence
+  city: varchar("city"), // City of residence
+  gender: varchar("gender"), // Gender: "male" or "female"
   profileImageUrl: varchar("profile_image_url"),
   bio: text("bio"),
   isCreator: boolean("is_creator").default(false).notNull(),

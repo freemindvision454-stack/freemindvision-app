@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
@@ -26,6 +27,11 @@ export default function SignupPage() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
+      phoneNumber: "",
+      dateOfBirth: "",
+      country: "",
+      city: "",
+      gender: undefined,
     },
   });
 
@@ -126,6 +132,107 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Numéro de téléphone</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="tel"
+                        placeholder="+221 77 123 45 67"
+                        disabled={isLoading}
+                        data-testid="input-phone"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pays</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Sénégal"
+                          disabled={isLoading}
+                          data-testid="input-country"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ville</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Dakar"
+                          disabled={isLoading}
+                          data-testid="input-city"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date de naissance</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          disabled={isLoading}
+                          data-testid="input-dob"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Genre</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-gender">
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="male" data-testid="option-male">Homme</SelectItem>
+                          <SelectItem value="female" data-testid="option-female">Femme</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

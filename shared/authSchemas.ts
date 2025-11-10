@@ -28,6 +28,29 @@ export const registerSchema = z.object({
     .min(1, "Le nom est requis")
     .max(50, "Le nom est trop long")
     .trim(),
+  phoneNumber: z
+    .string()
+    .min(1, "Le numéro de téléphone est requis")
+    .regex(/^[0-9+\s-()]+$/, "Numéro de téléphone invalide")
+    .trim(),
+  dateOfBirth: z
+    .string()
+    .min(1, "La date de naissance est requise")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format de date invalide (YYYY-MM-DD)"),
+  country: z
+    .string()
+    .min(1, "Le pays est requis")
+    .max(100, "Le nom du pays est trop long")
+    .trim(),
+  city: z
+    .string()
+    .min(1, "La ville est requise")
+    .max(100, "Le nom de la ville est trop long")
+    .trim(),
+  gender: z
+    .enum(["male", "female"], {
+      errorMap: () => ({ message: "Veuillez sélectionner votre genre" }),
+    }),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
