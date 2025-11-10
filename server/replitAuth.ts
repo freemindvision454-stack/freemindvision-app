@@ -104,10 +104,16 @@ export async function setupAuth(app: Express) {
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+  
+  // CRITICAL: Always configure serialize/deserialize for local auth to work
+  // This is required for req.login() to function properly
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   if (!hasReplitAuth) {
     console.log("[AUTH] Replit Auth disabled - REPL_ID not found");
     console.log("[AUTH] Using local authentication only (email/password)");
+    console.log("[AUTH] Passport serialize/deserialize configured for local auth");
     return;
   }
 
@@ -143,9 +149,6 @@ export async function setupAuth(app: Express) {
       registeredStrategies.add(strategyName);
     }
   };
-
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
     ensureStrategy(req.hostname);
