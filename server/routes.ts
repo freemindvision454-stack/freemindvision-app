@@ -1162,7 +1162,9 @@ export async function registerRoutes(app: Express): Promise<Express> {
         if (invoice.subscription) {
           try {
             // Retrieve subscription details
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            const subscriptionData = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            // Handle both Stripe SDK v15 and v16+ response formats
+            const subscription = 'data' in subscriptionData ? (subscriptionData as any).data : subscriptionData;
             
             // Update subscription period and record payment
             await storage.updateSubscriptionStatus(
