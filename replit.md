@@ -83,6 +83,25 @@ Comprehensive APIs cover:
 - **Mobile Money Providers**: Integrations for Orange Money, MTN Money, Wave.
 - **Bank Transfer Systems**: Integration with banking systems (e.g., ECO BANQUE).
 
+## Deployment Options
+
+### **Recommended: Railway.app**
+- **Status**: Primary deployment platform (as of Nov 11, 2025)
+- **Why Railway**: Zero-config PostgreSQL, automatic SSL/TLS, no database connection issues
+- **Setup Time**: 10-15 minutes
+- **Documentation**: See `DEPLOYMENT_RAILWAY.md` for complete guide
+- **Pricing**: $5 free credits, then usage-based (~$10-20/month)
+
+### **Alternative: Replit Autoscale**
+- **Status**: Excellent for Replit-hosted projects
+- **Advantages**: 1-click deploy, integrated PostgreSQL, auto-scaling
+- **Pricing**: Free tier available, then ~$7-20/month
+
+### **Previous Platform: Render.com**
+- **Status**: Deprecated due to persistent SSL/TLS configuration issues
+- **Issues Encountered**: Complex PostgreSQL SSL/TLS requirements, inconsistent connection behavior
+- **Migration Date**: Nov 11, 2025 (moved to Railway)
+
 ## Recent Changes (Nov 11, 2025)
 
 - **Extended User Registration**: Added 5 optional signup fields (phoneNumber, dateOfBirth, country, city, gender) for email/password registrations
