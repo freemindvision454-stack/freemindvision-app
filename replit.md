@@ -85,22 +85,35 @@ Comprehensive APIs cover:
 
 ## Deployment Options
 
-### **Recommended: Railway.app**
+### **Recommended: Render + Supabase** ✅
 - **Status**: Primary deployment platform (as of Nov 11, 2025)
-- **Why Railway**: Zero-config PostgreSQL, automatic SSL/TLS, no database connection issues
-- **Setup Time**: 10-15 minutes
-- **Documentation**: See `DEPLOYMENT_RAILWAY.md` for complete guide
-- **Pricing**: $5 free credits, then usage-based (~$10-20/month)
+- **Why**: Production-grade reliability + Zero SSL/TLS issues
+- **Architecture**: 
+  - Render.com for application hosting (free tier or $7/month)
+  - Supabase for PostgreSQL database (500 MB free)
+- **Setup Time**: 15-20 minutes
+- **Documentation**: See `RENDER_SUPABASE_DEPLOYMENT_FR.md` for complete guide
+- **Pricing**: $0/month (free tiers) or $7/month (always-on app)
+- **Advantages**:
+  - Render: Mature infrastructure, reliable, production-ready
+  - Supabase: Professional PostgreSQL, automatic SSL/TLS, daily backups, easy dashboard
+  - No SSL/TLS configuration issues (Supabase handles everything)
+
+### **Alternative: Railway.app**
+- **Status**: Good alternative for rapid prototyping
+- **Advantages**: Ultra-fast deploys, zero-config PostgreSQL, auto-scaling
+- **Disadvantages**: Requires credit card, usage-based billing can be unpredictable
+- **Pricing**: $5 trial credit, then ~$10-20/month
 
 ### **Alternative: Replit Autoscale**
-- **Status**: Excellent for Replit-hosted projects
+- **Status**: Suitable for Replit-hosted projects
 - **Advantages**: 1-click deploy, integrated PostgreSQL, auto-scaling
+- **Disadvantages**: May have deployment configuration issues
 - **Pricing**: Free tier available, then ~$7-20/month
 
-### **Previous Platform: Render.com**
-- **Status**: Deprecated due to persistent SSL/TLS configuration issues
-- **Issues Encountered**: Complex PostgreSQL SSL/TLS requirements, inconsistent connection behavior
-- **Migration Date**: Nov 11, 2025 (moved to Railway)
+### **Previous Attempts**
+- **Render.com (solo)**: Persistent SSL/TLS issues with Render's managed PostgreSQL
+- **Railway.app (solo)**: Required credit card upfront, trial ended policy changes
 
 ## Recent Changes (Nov 11, 2025)
 
