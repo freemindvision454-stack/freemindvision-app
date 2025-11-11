@@ -12,6 +12,33 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+// Validate and prepare connection string
+function prepareConnectionString(rawUrl: string): { url: string; isLocalhost: boolean; isSupabase: boolean } {
+  const isLocalhost = rawUrl.includes('localhost');
+  const isSupabase = rawUrl.includes('supabase.co');
+  
+  // Reject transaction pooler URLs (pgbouncer) - not compatible with migrations
+  if (rawUrl.includes('pgbouncer=true') || rawUrl.includes(':6543')) {
+    throw new Error(
+      'Transaction pooler connection detected. Use the regular connection string (port 5432) instead of the transaction pooler (port 6543).'
+    );
+  }
+  
+  let url = rawUrl;
+  
+  // For cloud deployments (not localhost), ensure SSL is enabled
+  if (!isLocalhost) {
+    // Remove any existing sslmode parameter
+    url = url.replace(/[?&]sslmode=[^&]*/g, '');
+    // Add sslmode=require
+    const separator = url.includes('?') ? '&' : '?';
+    url = `${url}${separator}sslmode=require`;
+    console.log('[DATABASE] 🔒 SSL/TLS enabled for cloud deployment');
+  }
+  
+  return { url, isLocalhost, isSupabase };
+}
+
 // Detect if we're using Neon (WebSocket) or standard PostgreSQL (TCP)
 const isNeonDatabase = process.env.DATABASE_URL.includes('neon.tech') || 
                        process.env.DATABASE_URL.includes('neon.database');
@@ -23,36 +50,33 @@ if (isNeonDatabase) {
   // Use Neon serverless driver for Neon databases
   neonConfig.webSocketConstructor = ws;
   
-  pool = new NeonPool({ connectionString: process.env.DATABASE_URL });
+  const { url } = prepareConnectionString(process.env.DATABASE_URL);
+  pool = new NeonPool({ connectionString: url });
   db = neonDrizzle({ client: pool, schema });
   
   console.log('[DATABASE] Using Neon WebSocket driver');
 } else {
-  // Use standard PostgreSQL driver for Render and other providers
-  const isLocalhost = process.env.DATABASE_URL.includes('localhost');
+  // Use standard PostgreSQL driver for Supabase, Render, and other providers
+  const { url, isLocalhost, isSupabase } = prepareConnectionString(process.env.DATABASE_URL);
   
-  // For cloud providers (Render, etc.), FORCE SSL/TLS by replacing any existing sslmode
-  let connectionString = process.env.DATABASE_URL;
+  // Configure SSL based on environment
+  let sslConfig: any = false;
   if (!isLocalhost) {
-    // Remove any existing sslmode parameter (including sslmode=disable)
-    connectionString = connectionString.replace(/[?&]sslmode=[^&]*/g, '');
-    // Add sslmode=require
-    const separator = connectionString.includes('?') ? '&' : '?';
-    connectionString = `${connectionString}${separator}sslmode=require`;
-    console.log('[DATABASE] 🔒 Forced SSL/TLS mode for cloud deployment');
+    // For Supabase and other cloud providers:
+    // Use 'require' mode which allows self-signed certificates
+    // This is more compatible than rejectUnauthorized: false
+    sslConfig = 'require';
+    console.log('[DATABASE] SSL mode: require (compatible with Supabase/cloud providers)');
   }
-  
-  const sslConfig = isLocalhost ? false : { rejectUnauthorized: false };
     
   pool = new PgPool({ 
-    connectionString,
+    connectionString: url,
     ssl: sslConfig
   });
   db = pgDrizzle({ client: pool, schema });
   
-  console.log('[DATABASE] Using standard PostgreSQL driver');
+  console.log(`[DATABASE] Using standard PostgreSQL driver${isSupabase ? ' (Supabase)' : ''}`);
   console.log('[DATABASE] SSL enabled:', !isLocalhost);
-  console.log('[DATABASE] Connection string includes sslmode:', connectionString.includes('sslmode='));
   
   // Add error listener for diagnostics
   pool.on('error', (err: Error) => {
