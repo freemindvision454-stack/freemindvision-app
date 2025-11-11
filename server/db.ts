@@ -29,18 +29,27 @@ if (isNeonDatabase) {
   console.log('[DATABASE] Using Neon WebSocket driver');
 } else {
   // Use standard PostgreSQL driver for Render and other providers
-  // Enable SSL by default for cloud providers (Render requires SSL/TLS)
-  const sslConfig = process.env.DATABASE_URL.includes('localhost') 
-    ? false 
-    : { rejectUnauthorized: false };
+  const isLocalhost = process.env.DATABASE_URL.includes('localhost');
+  
+  // For cloud providers (Render, etc.), force SSL/TLS
+  let connectionString = process.env.DATABASE_URL;
+  if (!isLocalhost && !connectionString.includes('sslmode=')) {
+    // Add sslmode=require to connection string for Render
+    const separator = connectionString.includes('?') ? '&' : '?';
+    connectionString = `${connectionString}${separator}sslmode=require`;
+  }
+  
+  const sslConfig = isLocalhost ? false : { rejectUnauthorized: false };
     
   pool = new PgPool({ 
-    connectionString: process.env.DATABASE_URL,
+    connectionString,
     ssl: sslConfig
   });
   db = pgDrizzle({ client: pool, schema });
   
-  console.log('[DATABASE] Using standard PostgreSQL driver with SSL:', sslConfig !== false);
+  console.log('[DATABASE] Using standard PostgreSQL driver');
+  console.log('[DATABASE] SSL enabled:', !isLocalhost);
+  console.log('[DATABASE] Connection string includes sslmode:', connectionString.includes('sslmode='));
   
   // Add error listener for diagnostics
   pool.on('error', (err: Error) => {
