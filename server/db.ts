@@ -31,12 +31,15 @@ if (isNeonDatabase) {
   // Use standard PostgreSQL driver for Render and other providers
   const isLocalhost = process.env.DATABASE_URL.includes('localhost');
   
-  // For cloud providers (Render, etc.), force SSL/TLS
+  // For cloud providers (Render, etc.), FORCE SSL/TLS by replacing any existing sslmode
   let connectionString = process.env.DATABASE_URL;
-  if (!isLocalhost && !connectionString.includes('sslmode=')) {
-    // Add sslmode=require to connection string for Render
+  if (!isLocalhost) {
+    // Remove any existing sslmode parameter (including sslmode=disable)
+    connectionString = connectionString.replace(/[?&]sslmode=[^&]*/g, '');
+    // Add sslmode=require
     const separator = connectionString.includes('?') ? '&' : '?';
     connectionString = `${connectionString}${separator}sslmode=require`;
+    console.log('[DATABASE] 🔒 Forced SSL/TLS mode for cloud deployment');
   }
   
   const sslConfig = isLocalhost ? false : { rejectUnauthorized: false };

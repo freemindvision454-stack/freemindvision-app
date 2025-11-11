@@ -83,7 +83,7 @@ Comprehensive APIs cover:
 - **Mobile Money Providers**: Integrations for Orange Money, MTN Money, Wave.
 - **Bank Transfer Systems**: Integration with banking systems (e.g., ECO BANQUE).
 
-## Recent Changes (Nov 10, 2025)
+## Recent Changes (Nov 11, 2025)
 
 - **Extended User Registration**: Added 5 optional signup fields (phoneNumber, dateOfBirth, country, city, gender) for email/password registrations
 - **Migration System**: Implemented automated baseline migration (0000_special_smiling_tiger.sql) that creates all 25 tables from scratch
@@ -92,4 +92,4 @@ Comprehensive APIs cover:
 - **Passport.js Fix**: Corrected authentication initialization to support both Replit (OIDC) and production (email/password) environments. Passport now initializes whenever SESSION_SECRET and DATABASE_URL are present, fixing "req.login is not a function" error on Render deployments.
 - **Auth Config System**: Added `/api/auth/config` endpoint and `useAuthConfig()` hook to conditionally show Google OAuth button based on Replit Auth availability. On Render (production), Google button is hidden and only email/password login is available. On Replit (dev), both OAuth and email/password work.
 - **TypeScript Build Fix**: Resolved 12 TypeScript compilation errors blocking Render builds: Fixed Drizzle numeric fields (PostgreSQL `numeric` returns strings at runtime, requiring `.toString()` conversions), corrected Stripe SDK v16+ `Response<T>` wrapper destructuring (`.data` property), replaced deprecated `getAllVideos` with `getVideos`, and aligned SessionUser interface types.
-- **PostgreSQL SSL/TLS Fix**: Enhanced database connection configuration to properly support Render's SSL/TLS requirement. Added `sslmode=require` parameter to connection string for cloud providers while maintaining `ssl: { rejectUnauthorized: false }` for certificate handling. Includes diagnostic logging for SSL status verification.
+- **PostgreSQL SSL/TLS FINAL Fix**: Implemented aggressive SSL enforcement that **forcibly replaces** any `sslmode=disable` parameter in DATABASE_URL with `sslmode=require`. Applied to both runtime connection (server/db.ts) and migration system (server/migrate.ts) to prevent Render's default non-SSL connection strings from bypassing SSL/TLS requirements. This ensures cloud PostgreSQL deployments always use encrypted connections regardless of environment variable configuration.

@@ -39,10 +39,23 @@ export async function runMigrations() {
       throw new Error("DATABASE_URL not configured");
     }
     
+    // Force SSL/TLS by replacing any existing sslmode parameter
+    const isLocalhost = process.env.DATABASE_URL.includes('localhost');
+    let migrationConnectionString = process.env.DATABASE_URL;
+    
+    if (!isLocalhost) {
+      // Remove any existing sslmode (including sslmode=disable)
+      migrationConnectionString = migrationConnectionString.replace(/[?&]sslmode=[^&]*/g, '');
+      // Add sslmode=require
+      const separator = migrationConnectionString.includes('?') ? '&' : '?';
+      migrationConnectionString = `${migrationConnectionString}${separator}sslmode=require`;
+      console.log('[MIGRATION] 🔒 Forced SSL/TLS mode for migrations');
+    }
+    
     // Créer une connexion dédiée pour les migrations
-    migrationClient = postgres(process.env.DATABASE_URL, {
+    migrationClient = postgres(migrationConnectionString, {
       max: 1,
-      ssl: 'require', // Neon et Render exigent SSL
+      ssl: isLocalhost ? false : 'require',
     });
     
     // Acquérir un advisory lock pour éviter les exécutions concurrentes
