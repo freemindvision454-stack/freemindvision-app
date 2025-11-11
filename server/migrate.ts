@@ -43,15 +43,6 @@ export async function runMigrations() {
     const rawUrl = process.env.DATABASE_URL;
     const isLocalhost = rawUrl.includes('localhost');
     
-    // Reject transaction pooler URLs (pgbouncer) - not compatible with Drizzle migrator
-    if (rawUrl.includes('pgbouncer=true') || rawUrl.includes(':6543')) {
-      throw new Error(
-        '[MIGRATION] ❌ Transaction pooler detected! ' +
-        'Drizzle migrations require a direct connection (port 5432), not the transaction pooler (port 6543). ' +
-        'Use the "Direct connection" or "Session pooler" connection string from Supabase settings.'
-      );
-    }
-    
     // Force SSL/TLS by replacing any existing sslmode parameter
     let migrationConnectionString = rawUrl;
     

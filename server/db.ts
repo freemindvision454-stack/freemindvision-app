@@ -17,13 +17,6 @@ function prepareConnectionString(rawUrl: string): { url: string; isLocalhost: bo
   const isLocalhost = rawUrl.includes('localhost');
   const isSupabase = rawUrl.includes('supabase.co');
   
-  // Reject transaction pooler URLs (pgbouncer) - not compatible with migrations
-  if (rawUrl.includes('pgbouncer=true') || rawUrl.includes(':6543')) {
-    throw new Error(
-      'Transaction pooler connection detected. Use the regular connection string (port 5432) instead of the transaction pooler (port 6543).'
-    );
-  }
-  
   let url = rawUrl;
   
   // For cloud deployments (not localhost), ensure SSL is enabled
