@@ -57,8 +57,9 @@ if (isNeonDatabase) {
   if (!isLocalhost) {
     // For Supabase and other cloud providers:
     // Use SSL with rejectUnauthorized: false to allow self-signed certificates
-    // The connection string already has sslmode=require appended
-    sslConfig = true;
+    sslConfig = {
+      rejectUnauthorized: false
+    };
     console.log('[DATABASE] SSL enabled (compatible with Supabase/cloud providers)');
   }
     

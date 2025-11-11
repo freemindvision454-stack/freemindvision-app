@@ -56,10 +56,10 @@ export async function runMigrations() {
     }
     
     // Créer une connexion dédiée pour les migrations
-    // Use 'require' SSL mode for cloud databases (compatible with Supabase)
+    // Use SSL with rejectUnauthorized: false for cloud databases (compatible with Supabase)
     migrationClient = postgres(migrationConnectionString, {
       max: 1,
-      ssl: isLocalhost ? false : 'require',
+      ssl: isLocalhost ? false : { rejectUnauthorized: false },
     });
     
     // Acquérir un advisory lock pour éviter les exécutions concurrentes
