@@ -63,10 +63,10 @@ if (isNeonDatabase) {
   let sslConfig: any = false;
   if (!isLocalhost) {
     // For Supabase and other cloud providers:
-    // Use 'require' mode which allows self-signed certificates
-    // This is more compatible than rejectUnauthorized: false
-    sslConfig = 'require';
-    console.log('[DATABASE] SSL mode: require (compatible with Supabase/cloud providers)');
+    // Use SSL with rejectUnauthorized: false to allow self-signed certificates
+    // The connection string already has sslmode=require appended
+    sslConfig = true;
+    console.log('[DATABASE] SSL enabled (compatible with Supabase/cloud providers)');
   }
     
   pool = new PgPool({ 
