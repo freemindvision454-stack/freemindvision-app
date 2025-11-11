@@ -15,22 +15,11 @@ import { getOnlineUsers, isUserOnline } from "./websocket";
 import passport from "passport";
 import { rateLimit } from "express-rate-limit";
 import { registerSchema, loginSchema, type SessionUser } from "@shared/authSchemas";
+import { initializeCloudinary, cloudinaryUploadStream } from "./cloudinary";
 
-// Configure multer for file uploads
-const uploadStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Store files in uploaded_videos directory
-    cb(null, "./uploaded_videos");
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename
-    const uniqueName = `${randomUUID()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
-
+// Configure multer for file uploads (use memory storage for Cloudinary)
 const upload = multer({
-  storage: uploadStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
   fileFilter: (req, file, cb) => {
     // Accept videos and images only
@@ -94,6 +83,9 @@ if (process.env.STRIPE_SECRET_KEY) {
 }
 
 export async function registerRoutes(app: Express): Promise<Express> {
+  // Initialize Cloudinary
+  const cloudinaryEnabled = initializeCloudinary();
+
   // Health check endpoint (must be first, no auth required)
   app.get("/health", (_req: Request, res: Response) => {
     console.log(`[HEALTH] Health check requested`);
@@ -338,8 +330,42 @@ export async function registerRoutes(app: Express): Promise<Express> {
         const videoFile = files.video[0];
         const thumbnailFile = files.thumbnail?.[0];
 
-        const videoUrl = `/uploads/${videoFile.filename}`;
-        const thumbnailUrl = thumbnailFile ? `/uploads/${thumbnailFile.filename}` : null;
+        let videoUrl: string;
+        let thumbnailUrl: string | null = null;
+
+        if (cloudinaryEnabled) {
+          // Upload to Cloudinary
+          console.log('[VIDEO-UPLOAD] Uploading video to Cloudinary...');
+          const videoUpload: any = await cloudinaryUploadStream(videoFile.buffer, {
+            resource_type: 'video',
+            folder: 'freemind-videos',
+          });
+          videoUrl = videoUpload.secure_url;
+          console.log(`[VIDEO-UPLOAD] ✅ Video uploaded to Cloudinary: ${videoUrl}`);
+
+          // Upload thumbnail if provided
+          if (thumbnailFile) {
+            console.log('[VIDEO-UPLOAD] Uploading thumbnail to Cloudinary...');
+            const thumbnailUpload: any = await cloudinaryUploadStream(thumbnailFile.buffer, {
+              resource_type: 'image',
+              folder: 'freemind-thumbnails',
+            });
+            thumbnailUrl = thumbnailUpload.secure_url;
+            console.log(`[VIDEO-UPLOAD] ✅ Thumbnail uploaded to Cloudinary: ${thumbnailUrl}`);
+          }
+        } else {
+          // Fallback to local storage (not recommended for production)
+          console.warn('[VIDEO-UPLOAD] ⚠️  Cloudinary not configured, using local storage (temporary)');
+          const videoPath = path.join('./uploaded_videos', `${randomUUID()}.mp4`);
+          fs.writeFileSync(videoPath, videoFile.buffer);
+          videoUrl = `/uploads/${path.basename(videoPath)}`;
+          
+          if (thumbnailFile) {
+            const thumbPath = path.join('./uploaded_videos', `${randomUUID()}.jpg`);
+            fs.writeFileSync(thumbPath, thumbnailFile.buffer);
+            thumbnailUrl = `/uploads/${path.basename(thumbPath)}`;
+          }
+        }
 
         const video = await storage.createVideo({
           creatorId: userId,
