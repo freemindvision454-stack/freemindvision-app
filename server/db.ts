@@ -1,3 +1,4 @@
+// FreeMind Vision - Database Connection (Supabase SSL Compatible)
 // Database connection setup - supports both Neon WebSocket and standard PostgreSQL
 import { Pool as NeonPool, neonConfig } from '@neondatabase/serverless';
 import { drizzle as neonDrizzle } from 'drizzle-orm/neon-serverless';
