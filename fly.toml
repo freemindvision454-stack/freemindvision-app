@@ -1,0 +1,49 @@
+# Fly.io configuration for FreeMind Vision
+# Documentation: https://fly.io/docs/reference/configuration/
+
+app = "freemindvision"
+primary_region = "cdg"  # Paris - closest to African users
+
+# Build configuration
+[build]
+
+# Environment variables (public, non-sensitive)
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+  MIGRATIONS_AUTO_RUN = "true"
+
+# HTTP service configuration (new syntax)
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"  # Auto-suspend when idle
+  auto_start_machines = true   # Wake on request
+  min_machines_running = 0     # Scale to zero when idle (free tier)
+  processes = ["app"]
+
+  # HTTP request timeouts
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  # Health checks (nested under http_service)
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health"
+
+# VM configuration
+[[vm]]
+  size = "shared-cpu-1x"  # Free tier: 256MB RAM
+  memory = "256mb"
+
+# Swap for memory spikes during video uploads (correct syntax)
+swap_size_mb = 512
+
+# Deploy configuration
+[deploy]
+  release_command = "echo 'Migrations will run automatically via MIGRATIONS_AUTO_RUN'"
