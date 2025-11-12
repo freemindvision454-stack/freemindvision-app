@@ -37,7 +37,6 @@ primary_region = "cdg"  # Paris - closest to African users
     path = "/health"
 
 # VM configuration - UPGRADED for FreeMind Vision
-[[vm]]
   size = "shared-cpu-1x"  # 1 shared vCPU
   memory = "512mb"         # 512MB RAM (upgraded from 256MB)
 
