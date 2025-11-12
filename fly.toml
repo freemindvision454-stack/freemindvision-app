@@ -36,12 +36,12 @@ primary_region = "cdg"  # Paris - closest to African users
     method = "GET"
     path = "/health"
 
-# VM configuration
+# VM configuration - UPGRADED for FreeMind Vision
 [[vm]]
-  size = "shared-cpu-1x"  # Free tier: 256MB RAM
-  memory = "256mb"
+  size = "shared-cpu-1x"  # 1 shared vCPU
+  memory = "512mb"         # 512MB RAM (upgraded from 256MB)
 
-# Swap for memory spikes during video uploads (correct syntax)
+# Swap for memory spikes during video uploads
 swap_size_mb = 512
 
 # Deploy configuration

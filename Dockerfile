@@ -34,8 +34,9 @@ COPY . .
 # Build frontend with Vite only
 RUN npx vite build
 
-# Keep tsx for production (don't prune dev dependencies)
-# tsx is needed to run TypeScript directly
+# Remove dev dependencies but keep tsx for TypeScript runtime
+RUN npm prune --production && \
+    npm install tsx --save-prod
 
 # Final stage for app image
 FROM base
@@ -46,7 +47,7 @@ RUN apt-get update -qq && \
     ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy built application from build stage
+# Copy built application from build stage (with pruned dependencies)
 COPY --from=build /app /app
 
 # Expose port 8080 (Fly.io default)
