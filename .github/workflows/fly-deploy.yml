@@ -17,6 +17,8 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       
       - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only --app freemindvision-app
+        run: |
+          flyctl secrets set DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          flyctl deploy --remote-only --app freemindvision-app
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
