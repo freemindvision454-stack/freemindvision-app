@@ -31,11 +31,11 @@ RUN npm ci --include=dev
 # Copy application code
 COPY . .
 
-# Build frontend with Vite and backend with esbuild
-RUN npm run build
+# Build frontend with Vite only
+RUN npx vite build
 
-# Remove development dependencies
-RUN npm prune --omit=dev
+# Keep tsx for production (don't prune dev dependencies)
+# tsx is needed to run TypeScript directly
 
 # Final stage for app image
 FROM base
@@ -56,5 +56,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the server
-CMD [ "npm", "start" ]
+# Start the server with tsx (handles TypeScript natively)
+CMD [ "npx", "tsx", "server/index.ts" ]
