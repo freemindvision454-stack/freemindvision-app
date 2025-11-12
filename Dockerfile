@@ -34,9 +34,11 @@ COPY . .
 # Build frontend with Vite only
 RUN npx vite build
 
-# Remove dev dependencies but keep tsx for TypeScript runtime
-RUN npm prune --production && \
-    npm install tsx --save-prod
+# Build frontend with Vite only
+RUN npx vite build
+
+# Keep all dependencies for production (tsx + vite needed by server)
+# Note: server/vite.ts requires vite package even in production
 
 # Final stage for app image
 FROM base
