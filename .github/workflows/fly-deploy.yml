@@ -18,7 +18,7 @@ jobs:
       
       - name: Deploy to Fly.io
         run: |
-          flyctl secrets set DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          flyctl secrets set DATABASE_URL="${{ secrets.DATABASE_URL }}" --app freemindvision-app
           flyctl deploy --remote-only --app freemindvision-app
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
