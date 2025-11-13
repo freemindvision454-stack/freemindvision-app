@@ -34,6 +34,9 @@ COPY . .
 # Build frontend with Vite only
 RUN npx vite build
 
+# Copy build output to where server/vite.ts expects it
+# Vite builds to dist/public, but server/vite.ts looks in server/public
+RUN mkdir -p server/public && cp -r dist/public/* server/public/
 # Keep all dependencies for production (tsx + vite needed by server)
 # Note: server/vite.ts requires vite package even in production
 
