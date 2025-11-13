@@ -34,9 +34,6 @@ COPY . .
 # Build frontend with Vite only
 RUN npx vite build
 
-# Build frontend with Vite only
-RUN npx vite build
-
 # Keep all dependencies for production (tsx + vite needed by server)
 # Note: server/vite.ts requires vite package even in production
 
