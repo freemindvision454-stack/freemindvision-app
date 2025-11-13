@@ -156,20 +156,11 @@ app.use((req, res, next) => {
     });
     
         console.log(`[STARTUP] Initialization complete, server running`);
-    
-    // Run database migrations AFTER server starts listening
-    // This ensures Fly.io health checks pass before migrations complete
-    // Migrations run in background and don't block startup
-    (async () => {
-      try {
-        log(`Running database migrations in background...`);
-        await runMigrations();
-        log(`✅ Database migrations completed successfully`);
-      } catch (error: any) {
-        log(`⚠️  WARNING: Migration failed: ${error.message}`);
-        console.error('[MIGRATION ERROR]', error);
-        // App continues running even if migrations fail
-      }
+     console.log(`[STARTUP] Initialization complete, server running`);
+
+  } catch (error: any) {
+    log(`FATAL ERROR during server initialization: ${error.message}`);   
+
     })();
 
   } catch (error: any) {
