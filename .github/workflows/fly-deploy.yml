@@ -1,25 +1,56 @@
-
 name: Deploy to Fly.io
 
 on:
   push:
     branches:
       - main
-      - master
-  workflow_dispatch:
 
 jobs:
   deploy:
     name: Deploy FreeMind Vision
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      
-      - name: Deploy to Fly.io
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Verify required secrets exist
         run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "❌ ERROR: DATABASE_URL secret is not set in GitHub!"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SESSION_SECRET }}" ]; then
+            echo "❌ ERROR: SESSION_SECRET secret is not set in GitHub!"
+            exit 1
+          fi
+          echo "✅ DATABASE_URL secret is configured"
+          echo "✅ SESSION_SECRET secret is configured"
+
+      - name: Set secrets on Fly.io
+        run: |
+          echo "Setting DATABASE_URL secret on Fly.io..."
           flyctl secrets set DATABASE_URL="${{ secrets.DATABASE_URL }}" --app freemindvision-app
-          flyctl deploy --remote-only --app freemindvision-app
+          echo "✅ DATABASE_URL configured on Fly.io"
+          
+          echo "Setting SESSION_SECRET on Fly.io..."
+          flyctl secrets set SESSION_SECRET="${{ secrets.SESSION_SECRET }}" --app freemindvision-app
+          echo "✅ SESSION_SECRET configured on Fly.io"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only --app freemindvision-app
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for app to be ready..."
+          sleep 10
+          echo "Testing health endpoint..."
+          curl -f https://freemindvision-app.fly.dev/health || echo "⚠️ Health check failed"
+        continue-on-error: true
