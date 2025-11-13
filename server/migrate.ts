@@ -19,7 +19,7 @@ import { sql } from "drizzle-orm";
  * 3. Exécute les migrations via Drizzle Migrator
  * 4. Libère le lock
  */    const autoRunEnabled = options?.skipEnvCheck || process.env.MIGRATIONS_AUTO_RUN === 'true';
-
+    const autoRunEnabled = options?.skipEnvCheck || process.env.MIGRATIONS_AUTO_RUN === 'true';
     if (!autoRunEnabled) {
       console.log("[MIGRATION] ⏭️  MIGRATIONS_AUTO_RUN non activé - migration ignorée");
       console.log("[MIGRATION] 💡 Pour activer : MIGRATIONS_AUTO_RUN=true");
@@ -145,5 +145,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     .catch((error) => {
       console.error("[MIGRATION] ❌ Migration process failed:", error);
       process.exit(1);
+    
+// Auto-execute when run directly (e.g., via Fly.io release_command)
+// This allows the script to work both as a module and as a standalone command
+if (import.meta.url === `file://${process.argv[1]}`) {
+  console.log("[MIGRATION] 🚀 Running migrations in standalone mode (release_command)");
+  runMigrations({ skipEnvCheck: true })
+    .then(() => {
+      console.log("[MIGRATION] ✅ Migration process completed successfully");
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error("[MIGRATION] ❌ Migration process failed:", error);
+      process.exit(1);
     });
+}
         }
