@@ -14,8 +14,6 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Validate and prepare connection string
-function prepareConnectionString(rawUrl: string): { url: string; isLocalhost: boolean; isSupabase: boolean } {
-  const isLocalhost = rawUrl.includes('localhost');
 // Validate and prepare connection string
 function prepareConnectionString(rawUrl: string): { url: string; isLocalhost: boolean; isSupabase: boolean } {
   const isLocalhost = rawUrl.includes('localhost');
