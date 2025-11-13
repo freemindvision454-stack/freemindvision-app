@@ -54,31 +54,21 @@ app.use((req, res, next) => {
     const nodeEnv = process.env.NODE_ENV || 'development';
     console.log(`[STARTUP] NODE_ENV: ${nodeEnv}`);
     console.log(`[STARTUP] PORT: ${process.env.PORT || '5000'}`);
-    log(`Starting server in ${nodeEnv} mode...`);
     
-  // Add health check endpoint FIRST (before migrations)
-// This allows Fly.io to see the app is starting even if migrations fail
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-log(`✓ Health check endpoint ready`);
-
-// Run database migrations with error handling
-try {
-  await runMigrations();
-  log(`Database migrations completed`);
-} catch (error: any) {
-  log(`WARNING: Migration failed: ${error.message}`);
-  console.error('[MIGRATION ERROR]', error);
-  // Continue startup even if migrations fail - app can still serve requests
-}
+    app    log(`Starting server in ${nodeEnv} mode...`);
     
-    // Register all routes
+    // Add health check endpoint FIRST
+    // This allows Fly.io health checks to pass immediately
+    app.get('/health', (_req, res) => {
+      res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+    log(`✓ Health check endpoint ready`);
+    
+    // Register all routes (before migrations to avoid startup delay)
     await registerRoutes(app);
     log(`Routes registered successfully`);
 
-    // Add error handler middleware
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Add error handler middleware.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
 
@@ -165,7 +155,22 @@ try {
       });
     });
     
-    console.log(`[STARTUP] Initialization complete, server running`);
+        console.log(`[STARTUP] Initialization complete, server running`);
+    
+    // Run database migrations AFTER server starts listening
+    // This ensures Fly.io health checks pass before migrations complete
+    // Migrations run in background and don't block startup
+    (async () => {
+      try {
+        log(`Running database migrations in background...`);
+        await runMigrations();
+        log(`✅ Database migrations completed successfully`);
+      } catch (error: any) {
+        log(`⚠️  WARNING: Migration failed: ${error.message}`);
+        console.error('[MIGRATION ERROR]', error);
+        // App continues running even if migrations fail
+      }
+    })();
 
   } catch (error: any) {
     log(`FATAL ERROR during server initialization: ${error.message}`);
