@@ -54,8 +54,7 @@ app.use((req, res, next) => {
     const nodeEnv = process.env.NODE_ENV || 'development';
     console.log(`[STARTUP] NODE_ENV: ${nodeEnv}`);
     console.log(`[STARTUP] PORT: ${process.env.PORT || '5000'}`);
-    
-    app    log(`Starting server in ${nodeEnv} mode...`);
+    log(`Starting server in ${nodeEnv} mode...`);
     
     // Add health check endpoint FIRST
     // This allows Fly.io health checks to pass immediately
@@ -68,7 +67,8 @@ app.use((req, res, next) => {
     await registerRoutes(app);
     log(`Routes registered successfully`);
 
-    // Add error handler middleware.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Add error handler middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
 
@@ -155,8 +155,7 @@ app.use((req, res, next) => {
       });
     });
     
-        console.log(`[STARTUP] Initialization complete, server running`);
-         console.log(`[STARTUP] Initialization complete, server running`);
+    console.log(`[STARTUP] Initialization complete, server running`);
 
   } catch (error: any) {
     log(`FATAL ERROR during server initialization: ${error.message}`);
