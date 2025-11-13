@@ -1,21 +1,20 @@
 # syntax = docker/dockerfile:1
 
-# Adjust NODE_VERSION as desired
 ARG NODE_VERSION=20.18.1
 FROM node:${NODE_VERSION}-slim as base
 
 LABEL fly_launch_runtime="Node.js/Express"
 
-# Node.js app lives here
 WORKDIR /app
 
-# Set production environment
+# Set production environment and PORT
 ENV NODE_ENV="production"
+ENV PORT="8080"
 
-# Throw-away build stage to reduce size of final image
+# Throw-away build stage
 FROM base as build
 
-# Install packages needed to build node modules (including node-gyp for bcrypt)
+# Install build dependencies
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     build-essential \
@@ -31,33 +30,30 @@ RUN npm ci --include=dev
 # Copy application code
 COPY . .
 
-# Build frontend with Vite only
+# Build frontend with Vite
 RUN npx vite build
 
-# Copy build output to where server/vite.ts expects it
-# Vite builds to dist/public, but server/vite.ts looks in server/public
+# Copy Vite build to server/public
 RUN mkdir -p server/public && cp -r dist/public/* server/public/
-# Keep all dependencies for production (tsx + vite needed by server)
-# Note: server/vite.ts requires vite package even in production
 
-# Final stage for app image
+# Final stage
 FROM base
 
-# Install runtime dependencies (PostgreSQL client for migrations)
+# Install runtime dependencies
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy built application from build stage (with pruned dependencies)
+# Copy built application
 COPY --from=build /app /app
 
-# Expose port 8080 (Fly.io default)
+# Expose port 8080
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# Health check with longer start period
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the server with tsx (handles TypeScript natively)
+# Start server with tsx
 CMD [ "npx", "tsx", "server/index.ts" ]
