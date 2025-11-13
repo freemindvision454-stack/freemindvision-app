@@ -45,4 +45,4 @@ swap_size_mb = 512
 
 # Deploy configuration
 [deploy]
-  release_command = "echo 'Migrations will run automatically via MIGRATIONS_AUTO_RUN'"
+  release_command = "npx tsx server/migrate.ts"
