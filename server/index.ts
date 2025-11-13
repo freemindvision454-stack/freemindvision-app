@@ -56,9 +56,22 @@ app.use((req, res, next) => {
     console.log(`[STARTUP] PORT: ${process.env.PORT || '5000'}`);
     log(`Starting server in ${nodeEnv} mode...`);
     
-    // Run database migrations first
-    await runMigrations();
-    log(`Database migrations completed`);
+  // Add health check endpoint FIRST (before migrations)
+// This allows Fly.io to see the app is starting even if migrations fail
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+log(`✓ Health check endpoint ready`);
+
+// Run database migrations with error handling
+try {
+  await runMigrations();
+  log(`Database migrations completed`);
+} catch (error: any) {
+  log(`WARNING: Migration failed: ${error.message}`);
+  console.error('[MIGRATION ERROR]', error);
+  // Continue startup even if migrations fail - app can still serve requests
+}
     
     // Register all routes
     await registerRoutes(app);
