@@ -156,12 +156,7 @@ app.use((req, res, next) => {
     });
     
         console.log(`[STARTUP] Initialization complete, server running`);
-     console.log(`[STARTUP] Initialization complete, server running`);
-
-  } catch (error: any) {
-    log(`FATAL ERROR during server initialization: ${error.message}`);   
-
-    })();
+         console.log(`[STARTUP] Initialization complete, server running`);
 
   } catch (error: any) {
     log(`FATAL ERROR during server initialization: ${error.message}`);
