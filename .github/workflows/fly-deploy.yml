@@ -54,3 +54,4 @@ jobs:
           echo "Testing health endpoint..."
           curl -f https://freemindvision-app.fly.dev/health || echo "⚠️ Health check failed"
         continue-on-error: true
+        
