@@ -9,6 +9,8 @@ primary_region = "cdg"
 [env]
   PORT = "8080"
   NODE_ENV = "production"
+  DATABASE_URL = "postgresql://postgres.umulfmngekjummrmhbja:FreeMind2025Visio@aws-0-eu-west-1.pooler.supabase.com:6543/postgres"
+  SESSION_SECRET = "274fb5d720a3b6285f6a1283905bcb0f7d0ddc01fb09f2ec950c7234ebbd72e9"
   MIGRATIONS_AUTO_RUN = "true"
 
 [http_service]
