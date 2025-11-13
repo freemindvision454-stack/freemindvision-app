@@ -16,12 +16,20 @@ if (!process.env.DATABASE_URL) {
 // Validate and prepare connection string
 function prepareConnectionString(rawUrl: string): { url: string; isLocalhost: boolean; isSupabase: boolean } {
   const isLocalhost = rawUrl.includes('localhost');
+// Validate and prepare connection string
+function prepareConnectionString(rawUrl: string): { url: string; isLocalhost: boolean; isSupabase: boolean } {
+  const isLocalhost = rawUrl.includes('localhost');
   const isSupabase = rawUrl.includes('supabase.co');
   
   let url = rawUrl;
   
-  // For cloud deployments (not localhost), ensure SSL is enabled
-  if (!isLocalhost) {
+  // For Supabase, remove any sslmode parameter (Supabase handles SSL via pool config)
+  if (isSupabase) {
+    url = url.replace(/[?&]sslmode=[^&]*/g, '');
+    console.log('[DATABASE] 🔒 Supabase SSL will be configured via pool options');
+  } 
+  // For other cloud deployments (not localhost, not Supabase), add sslmode=require
+  else if (!isLocalhost) {
     // Remove any existing sslmode parameter
     url = url.replace(/[?&]sslmode=[^&]*/g, '');
     // Add sslmode=require
