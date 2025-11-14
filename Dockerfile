@@ -34,7 +34,7 @@ COPY . .
 RUN npx vite build
 
 # Copy Vite build to server/public
-RUN mkdir -p server/public && cp -r dist/public/* server/public/
+RUN mkdir -p server/public && cp -r dist/* server/public
 
 # Final stage
 FROM base
@@ -51,9 +51,9 @@ COPY --from=build /app /app
 # Expose port 8080
 EXPOSE 8080
 
-# Health check with longer start period
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s \
+  CMD node -e "require('http').get('http://localhost:${PORT}/')"
 
-# Start server with tsx
-CMD [ "npx", "tsx", "server/index.ts" ]
+# Start server
+CMD ["node", "server/index.js"]
