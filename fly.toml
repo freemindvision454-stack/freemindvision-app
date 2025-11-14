@@ -7,12 +7,12 @@ primary_region = "cdg"
 [build]
 
 [env]
-  PORT = "8080"
+  PORT = "5000"
   NODE_ENV = "production"
   MIGRATIONS_AUTO_RUN = "true"
 
 [http_service]
-  internal_port = 8080
+  internal_port = 5000
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
@@ -31,8 +31,8 @@ primary_region = "cdg"
     method = "GET"
     path = "/health"
 
-  size = "shared-cpu-1x"
-  memory = "512mb"
+size = "shared-cpu-1x"
+memory = "512mb"
 
 swap_size_mb = 512
 
