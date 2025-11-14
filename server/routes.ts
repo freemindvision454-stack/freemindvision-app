@@ -2069,3 +2069,17 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
   return app;
 }
+// --- ADMIN ROUTES SETUP ---
+
+// Import des routes admin
+import adminRoutes from "./routes/admin";
+
+// Fonction pour enregistrer les routes admin
+export function registerAdminRoutes(app: any) {
+    app.use("/admin", adminRoutes);
+}
+
+// Activation des routes admin
+registerAdminRoutes(app);
+
+// --- END ADMIN ROUTES SETUP ---
