@@ -4,23 +4,23 @@ primary_region = "cdg"
 [build]
 
 [env]
-  PORT = "3000"
-  NODE_ENV = "production"
+PORT = "8080"
+NODE_ENV = "production"
 
 [[services]]
-  internal_port = 3000
-  protocol = "tcp"
-  processes = ["app"]
+internal_port = 8080
+protocol = "tcp"
+processes = ["app"]
 
   [[services.ports]]
-    port = 80
+  port = 80
 
   [[services.ports]]
-    port = 443
+  port = 443
 
   [[services.tcp_checks]]
-    interval = "15s"
-    timeout = "5s"
+  interval = "15s"
+  timeout = "5s"
 
 [processes]
-  app = "npm start"
+app = "npm start"
