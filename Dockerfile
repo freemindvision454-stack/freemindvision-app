@@ -11,24 +11,29 @@ WORKDIR /app
 ENV NODE_ENV="production"
 ENV PORT="8080"
 
-# Throw-away build stage
+# ------------------------------
+# Build stage
+# ------------------------------
 FROM base as build
 
 # Install build dependencies
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
-    build-essential \
-    node-gyp \
-    pkg-config \
-    python-is-python3 && \
+      build-essential \
+      node-gyp \
+      pkg-config \
+      python-is-python3 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install node modules
-COPY package-lock.json package.json ./
+COPY package.json package-lock.json ./
 RUN npm ci --include=dev
 
 # Copy application code
 COPY . .
+
+# Compile TypeScript → JavaScript
+RUN npm run build
 
 # Build frontend with Vite
 RUN npx vite build
@@ -36,13 +41,15 @@ RUN npx vite build
 # Copy Vite build to server/public
 RUN mkdir -p server/public && cp -r dist/* server/public
 
-# Final stage
+# ------------------------------
+# Final Stage (Runtime)
+# ------------------------------
 FROM base
 
-# Install runtime dependencies
+# Install only runtime dependencies
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
-    ca-certificates && \
+      ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy built application
@@ -53,7 +60,7 @@ EXPOSE 8080
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s \
-  CMD node -e "require('http').get('http://localhost:${PORT}/')"
+  CMD node -e "require('http').get('http://localhost:${PORT}/')" || exit 1
 
-# Start server
-CMD ["node", "server/index.js"]
+# Start server (compiled JS)
+CMD ["node", "dist/index.js"]
