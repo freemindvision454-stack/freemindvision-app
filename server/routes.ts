@@ -2114,33 +2114,15 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("Error processing view earnings batch:", error);
       res.status(500).json({ message: "Failed to process view earnings" });
-    }
-  });
+return app;
+app.use("/admin", adminRoutes);
+import { sendSupportEmail } from "./lib/email";
+  
 
-  return app;
-}
-// --- ADMIN ROUTES SETUP ---
 
-// Import des routes admin
-import adminRoutes from "./routes/admin";
-
-// Fonction pour enregistrer les routes admin
-export function registerAdminRoutes(app: any) {
-    app.use("/admin", adminRoutes);
-}
-
-// Activation des routes admin
-registerAdminRoutes(app);
-
-// --- END ADMIN ROUTES SETUP ---
 import { sendSupportEmail } from "./lib/email";
 
-// Support contact route
-app.post("/support/contact", async (req, res) => {
-  try {
-    const { name, email, message } = req.body;
 
-    await sendSupportEmail({
       to: process.env.SUPPORT_EMAIL,
       subject: `Support request from ${name || email}`,
       html: `<p>${message}</p><p>From: ${email}</p>`
