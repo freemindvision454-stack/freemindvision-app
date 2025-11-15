@@ -1,31 +1,33 @@
-# Utiliser Node 20 pour la construction
+# -----------------------------
+# Phase 1 : Build
+# -----------------------------
 FROM node:20 AS builder
 
-# Définir le dossier de travail
 WORKDIR /app
 
-# Copier les fichiers de configuration
+# Copier les fichiers de config
 COPY package*.json ./
 COPY tsconfig.json ./
 
-# Copier le code source
+# Copier tout le projet
 COPY . .
 
 # Installer les dépendances
 RUN npm install
 
-# Builder le frontend (Vite)
+# Build du frontend (Vite)
 RUN npm run build
 
-# Copier le build Vite dans le backend Express
+# Copier le build du frontend vers le dossier du backend
 RUN mkdir -p server/public && cp -r dist/* server/public
 
-# Transpiler TypeScript → dist/
+# Transpiler TypeScript -> dossier dist/
 RUN npm run build:server
 
-# ------------------------------------------------------
-# Étape finale
-# ------------------------------------------------------
+
+# -----------------------------
+# Phase 2 : Exécution
+# -----------------------------
 FROM node:20 AS runner
 
 WORKDIR /app
@@ -36,7 +38,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/dist ./dist
 
-# Variables d'environnement
+# Définir environnement de production
 ENV NODE_ENV=production
 ENV PORT=8080
 
