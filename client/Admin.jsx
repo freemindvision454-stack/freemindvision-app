@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from "react";
-import axios from "../utils/axios"; // ton axios configuré avec token admin
+import axios from "../utils/axios"; // Ton axios configuré avec token
 
 export default function Admin() {
   const [users, setUsers] = useState([]);
@@ -13,31 +12,37 @@ export default function Admin() {
     loadVideos();
   }, []);
 
+  // --- CHARGER USERS ---
   async function loadUsers() {
     const res = await axios.get("/admin/users");
     setUsers(res.data);
   }
 
+  // --- BANNIR USER ---
   async function banUser(id) {
     await axios.post(`/admin/ban/${id}`);
     loadUsers();
   }
 
+  // --- SUPPRIMER USER ---
   async function deleteUser(id) {
     await axios.delete(`/admin/delete/${id}`);
     loadUsers();
   }
 
+  // --- BOOSTER VIDEO ---
   async function boostVideo(id) {
     await axios.post(`/admin/boost/${id}`);
     loadVideos();
   }
 
+  // --- CHARGER SIGNALEMENTS ---
   async function loadReports() {
     const res = await axios.get("/admin/reports");
     setReports(res.data);
   }
 
+  // --- CHARGER VIDEOS ---
   async function loadVideos() {
     const res = await axios.get("/admin/videos");
     setVideos(res.data);
@@ -47,6 +52,7 @@ export default function Admin() {
     <div className="admin-container">
       <h1>Dashboard Admin</h1>
 
+      {/* UTILISATEURS */}
       <section>
         <h2>Utilisateurs</h2>
         {users.map((u) => (
@@ -58,6 +64,7 @@ export default function Admin() {
         ))}
       </section>
 
+      {/* VIDEOS */}
       <section>
         <h2>Vidéos</h2>
         {videos.map((v) => (
@@ -68,6 +75,7 @@ export default function Admin() {
         ))}
       </section>
 
+      {/* SIGNALEMENTS */}
       <section>
         <h2>Signalements</h2>
         {reports.map((r) => (
@@ -78,4 +86,4 @@ export default function Admin() {
       </section>
     </div>
   );
-      }
+            }
