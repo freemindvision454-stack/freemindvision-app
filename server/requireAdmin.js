@@ -16,3 +16,4 @@ module.exports = function requireAdmin(req, res, next) {
         res.status(500).json({ error: 'server_error' });
     }
 };
+if (!user.isAdmin) return res.status(403).json({ error: "Forbidden" });
