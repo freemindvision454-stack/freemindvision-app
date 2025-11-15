@@ -2083,3 +2083,22 @@ export function registerAdminRoutes(app: any) {
 registerAdminRoutes(app);
 
 // --- END ADMIN ROUTES SETUP ---
+import { sendSupportEmail } from "./lib/email";
+
+// Support contact route
+app.post("/support/contact", async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+
+    await sendSupportEmail({
+      to: process.env.SUPPORT_EMAIL,
+      subject: `Support request from ${name || email}`,
+      html: `<p>${message}</p><p>From: ${email}</p>`
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "email_failed" });
+  }
+});
