@@ -1,89 +1,46 @@
-syntax=docker/dockerfile:1
+# Utiliser Node 20 pour la construction
+FROM node:20 AS builder
 
------------------------------
+# Définir le dossier de travail
+WORKDIR /app
 
-Base image
+# Copier les fichiers de configuration
+COPY package*.json ./
+COPY tsconfig.json ./
 
------------------------------
-
-ARG NODE_VERSION=20.18.1 FROM node:${NODE_VERSION}-slim AS base
-
-LABEL fly_launch_runtime="Node.js/Express" WORKDIR /app
-
-Set production environment
-
-ENV NODE_ENV=production ENV PORT=8080
-
------------------------------
-
-Build stage
-
------------------------------
-
-FROM base AS build
-
-Install build dependencies
-
-RUN apt-get update -qq && 
-apt-get install --no-install-recommends -y 
-build-essential 
-node-gyp 
-pkg-config 
-python-is-python3 && 
-rm -rf /var/lib/apt/lists/*
-
-Copy package files
-
-COPY package.json package-lock.json ./
-
-Install dependencies
-
-RUN npm ci --include=dev
-
-Copy all application source
-
+# Copier le code source
 COPY . .
 
-Build TypeScript backend
+# Installer les dépendances
+RUN npm install
 
+# Builder le frontend (Vite)
 RUN npm run build
 
-Build Vite frontend
-
-RUN npx vite build
-
-Move frontend build to server/public
-
+# Copier le build Vite dans le backend Express
 RUN mkdir -p server/public && cp -r dist/* server/public
 
------------------------------
+# Transpiler TypeScript → dist/
+RUN npm run build:server
 
-Runtime stage
+# ----------------------------
+# Étape finale
+# ----------------------------
+FROM node:20 AS runner
 
------------------------------
+WORKDIR /app
 
-FROM base AS runtime
+# Copier uniquement ce qui est nécessaire
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/dist ./dist
 
-Install only runtime dependencies
-
-RUN apt-get update -qq && 
-apt-get install --no-install-recommends -y 
-ca-certificates && 
-rm -rf /var/lib/apt/lists/*
-
-Copy compiled application from build
-
-COPY --from=build /app /app
-
-Expose port
+# Variables d'environnement
+ENV NODE_ENV=production
+ENV PORT=8080
 
 EXPOSE 8080
 
-Healthcheck
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 
-CMD node -e "require('http').get('http://localhost:8080', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
-
-Start server
-
+# Démarrer le serveur Node
 CMD ["node", "dist/index.js"]
