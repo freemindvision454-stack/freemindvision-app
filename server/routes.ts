@@ -1,3 +1,4 @@
+import adminRoutes from "./admin.js";
 import type { Express, Request, Response } from "express";
 import express from "express";
 import { storage } from "./storage";
@@ -16,10 +17,6 @@ import passport from "passport";
 import rateLimit from "express-rate-limit";
 import { registerSchema, loginSchema, type SessionUser } from "./shared/authSchema";
 import { initializeCloudinary, cloudinaryUploadStream } from "./cloudinary";
-
-// 🔥 ADMIN ROUTES — AJOUTÉ
-import adminRoutes from "./admin.js";
-
 // ======================================================
 // TON FICHIER CONTINUE NORMAL… (je laisse tout comme il est)
 // ======================================================
