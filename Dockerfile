@@ -3,48 +3,49 @@
 # ----------------------------
 FROM node:18 AS builder
 
+# Dossier de travail
 WORKDIR /app
 
-# Copier les fichiers de config
+# Copier seulement les fichiers nécessaires à l'installation
 COPY package*.json ./
 COPY tsconfig.json ./
 
 # Copier tout le projet
 COPY . .
 
-# Installer les dépendances
+# Installer dépendances complètes (dev + prod)
 RUN npm ci
 
-# Build du frontend (Vite)
-RUN npm run build
+# Build FRONTEND (si tu as un client Vite)
+RUN npm run build || echo "Pas de build frontend (Vite)"
 
-# Copier le build frontend vers le backend
-RUN mkdir -p server/public && cp -r dist/* server/public
+# Déplacer le frontend buildé vers server/public si existe
+RUN mkdir -p server/public && if [ -d "dist" ]; then cp -r dist/* server/public; fi
 
-# Transpiler le backend TypeScript
+# Build BACKEND (TypeScript -> JavaScript)
 RUN npm run build:server
 
-
 # ----------------------------
-# Phase 2 : Exécution
+# Phase 2 : Run / Exécution
 # ----------------------------
 FROM node:18 AS runner
 
+# Set working directory
 WORKDIR /app
 
-# Copier uniquement ce qui est nécessaire
+# Copier les fichiers nécessaires
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/server ./server
-COPY --from=builder /app/dist ./dist
 
-# Installer seulement les deps prod
+# Installer uniquement les dépendances de production
 RUN npm ci --omit=dev
 
-# Variables d’environnement
+# Variables d'environnement
 ENV NODE_ENV=production
 ENV PORT=8080
 
+# Exposer le port
 EXPOSE 8080
 
-# Lancer le serveur
-CMD ["node", "dist/index.js"]
+# Démarrer l'API (backend)
+CMD ["node", "server/dist/index.js"]
