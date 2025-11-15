@@ -23,4 +23,4 @@ processes = ["app"]
   timeout = "5s"
 
 [processes]
-app = "npm start"
+app = "node dist/index.js"
