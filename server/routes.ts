@@ -20,7 +20,7 @@ import { initializeCloudinary, cloudinaryUploadStream } from "./cloudinary";
 // ======================================================
 // TON FICHIER CONTINUE NORMAL… (je laisse tout comme il est)
 // ======================================================
-
+import { sendSupportEmail } from "./lib/email";
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -2017,8 +2017,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("[ADMIN] Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
-    }
-  });
+    };
 
   // Process view earnings batch job
   app.post("/api/admin/process-view-earnings", requiresAuth, requiresAdmin, async (req: any, res) => {
@@ -2114,17 +2113,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("Error processing view earnings batch:", error);
       res.status(500).json({ message: "Failed to process view earnings" });
-return app;
-app.use("/admin", adminRoutes);
-import { sendSupportEmail } from "./lib/email";
-  
-
-
-import { sendSupportEmail } from "./lib/email";
-
-
-      to: process.env.SUPPORT_EMAIL,
-      subject: `Support request from ${name || email}`,
+,
       html: `<p>${message}</p><p>From: ${email}</p>`
     });
 
