@@ -1,7 +1,7 @@
-# -----------------------------
+# ------------------------------
 # Phase 1 : Build
-# -----------------------------
-FROM node:20 AS builder
+# ------------------------------
+FROM node:18 AS builder
 
 WORKDIR /app
 
@@ -25,18 +25,20 @@ RUN mkdir -p server/public && cp -r dist/* server/public
 RUN npm run build:server
 
 
-# -----------------------------
+# ------------------------------
 # Phase 2 : Exécution
-# -----------------------------
-FROM node:20 AS runner
+# ------------------------------
+FROM node:18 AS runner
 
 WORKDIR /app
 
 # Copier uniquement ce qui est nécessaire
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/dist ./dist
+
+# Installer seulement les dépendances de production
+RUN npm install --production
 
 # Définir environnement de production
 ENV NODE_ENV=production
