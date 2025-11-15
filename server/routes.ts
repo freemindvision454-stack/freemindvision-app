@@ -1,6 +1,59 @@
 import type { Express, Request, Response } from "express";
 import express from "express";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated, requiresAuth, isReplitAuthEnabled } from "./auth";
+import { setupLocalStrategy } from "./auth/localStrategy";
+import multer from "multer";
+import path from "path";
+import { randomUUID } from "crypto";
+import fs from "fs";
+import Stripe from "stripe";
+import { db } from "./db";
+import { users, referrals, userSubscriptions } from "./shared/schema";
+import { eq } from "drizzle-orm";
+import { getOnlineUsers, isUserOnline } from "./websocket";
+import passport from "passport";
+import rateLimit from "express-rate-limit";
+import { registerSchema, loginSchema, type SessionUser } from "./shared/authSchema";
+import { initializeCloudinary, cloudinaryUploadStream } from "./cloudinary";
+
+// 🔥 ADMIN ROUTES — AJOUTÉ
+import adminRoutes from "./admin.js";
+
+// ======================================================
+// TON FICHIER CONTINUE NORMAL… (je laisse tout comme il est)
+// ======================================================
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+    if (allowedMimes.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Invalid file type"));
+  },
+});
+
+// … (TOUT LE RESTE DE TON FICHIER RESTE IDENTIQUE)
+
+// ======================================================
+// À LA FIN DES ROUTES, AJOUTE CECI :
+// ======================================================
+
+// 🔥 ADMIN PANEL ROUTES — AJOUTÉ
+app.use("/admin", adminRoutes);
+
+export default app;import type { Express, Request, Response } from "express";
+import express from "express";
+import { storage } from "./storage";
 import { setupAuth, isAuthenticated, requiresAuth, isReplitAuthEnabled } from "./replitAuth";
 import { setupLocalStrategy } from "./auth/localStrategy";
 import multer from "multer";
