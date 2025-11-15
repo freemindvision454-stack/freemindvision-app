@@ -23,9 +23,9 @@ RUN mkdir -p server/public && cp -r dist/* server/public
 # Transpiler TypeScript → dist/
 RUN npm run build:server
 
-# ----------------------------
+# ------------------------------------------------------
 # Étape finale
-# ----------------------------
+# ------------------------------------------------------
 FROM node:20 AS runner
 
 WORKDIR /app
