@@ -1,5 +1,3 @@
-
-// server/lib/email.js
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
