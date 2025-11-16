@@ -2113,3 +2113,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
  catch (err) {
   console.error(err);
    res.status(500).json({ error: "email_failed" });
+catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "email_failed" });
+}
+  }
