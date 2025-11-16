@@ -1970,7 +1970,23 @@ export async function registerRoutes(app: Express): Promise<Express> {
     }
   };
 
-  // TEMP: Delete user by email (requires strong admin secret)
+  // TEMP: Delete user by email (requires strong admin secret)res.json({
+    success: true,
+    processedVideos: processedCount,
+    totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
+    totalEarningsUsd: totalEarningsUsd.toFixed(2),
+    failures: failures.length,
+    failureDetails: failures,
+    hasMore,
+    nextCursor,
+    batchSize,
+    durationMS: duration,
+    timestamp: new Date().toISOString(),
+});
+} catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "email_failed" });
+}
   // Security: Uses environment-only secret to prevent unauthorized deletions
   app.delete("/api/admin/delete-user", async (req: Request, res: Response) => {
     try {
@@ -1992,129 +2008,4 @@ export async function registerRoutes(app: Express): Promise<Express> {
       
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ message: "Valid email is required" });
-      }
-      
-      // Find user first
-      const user = await storage.findUserByEmail(email);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found with this email" });
-      }
-      
-      // Audit log
-      console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
-      
-      // Delete user from database
-      await db.delete(users).where(eq(users.email, email.toLowerCase()));
-      
-      console.log(`[ADMIN] Successfully deleted user: ${email}`);
-      
-      res.json({ 
-        message: "User deleted successfully",
-        deletedEmail: email,
-        deletedUserId: user.id
-      });
-    } catch (error) {
-      console.error("[ADMIN] Error deleting user:", error);
-      res.status(500).json({ message: "Failed to delete user" });
-    };
-
-  // Process view earnings batch job
-  app.post("/api/admin/process-view-earnings", requiresAuth, requiresAdmin, async (req: any, res) => {
-    try {
-      const startTime = Date.now();
-      
-      // Parse optional parameters
-      const batchSize = parseInt(req.query.batchSize || "200");
-      const resumeCursor = req.query.resumeCursor || null;
-
-      // Get monetization settings
-      const settings = await storage.getMonetizationSettings();
-
-      // Get all videos from monetized creators
-      const allVideos = await storage.getVideos(10000); // Get up to 10k videos for batch processing
-      
-      // Filter videos from monetized creators
-      const monetizedVideos = [];
-      for (const video of allVideos) {
-        const creator = await storage.getUser(video.creatorId);
-        if (creator?.isMonetized) {
-          monetizedVideos.push(video);
-        }
-      }
-
-      // Apply resume cursor if provided (skip the cursor video to avoid double-processing)
-      let videosToProcess = monetizedVideos;
-      if (resumeCursor) {
-        const resumeIndex = monetizedVideos.findIndex(v => v.id === resumeCursor);
-        if (resumeIndex !== -1) {
-          // Start AFTER the cursor to avoid reprocessing the last video
-          videosToProcess = monetizedVideos.slice(resumeIndex + 1);
-        }
-      }
-
-      // Limit to batch size
-      const batch = videosToProcess.slice(0, batchSize);
-
-      // Process batch with error isolation
-      let processedCount = 0;
-      let totalEarningsFcfa = 0;
-      let totalEarningsUsd = 0;
-      const failures: Array<{ videoId: string; error: string }> = [];
-
-      for (const video of batch) {
-        try {
-          // Calculate earnings before payout to track totals
-          const existingEarnings = await storage.getVideoViewEarnings(video.id);
-          const lastViews = existingEarnings?.totalViews || 0;
-          const newViews = Math.max(0, video.views - lastViews);
-          
-          if (newViews > 0) {
-            const earningsPerViewFcfa = parseFloat(settings.pricePerViewFcfa);
-            const earningsPerViewUsd = parseFloat(settings.pricePerViewUsd);
-            const newEarningsFcfa = newViews * earningsPerViewFcfa;
-            const newEarningsUsd = newViews * earningsPerViewUsd;
             
-            totalEarningsFcfa += newEarningsFcfa;
-            totalEarningsUsd += newEarningsUsd;
-          }
-
-          // Apply payout
-          await storage.applyViewEarningsPayout(video.id, settings);
-          processedCount++;
-        } catch (error: any) {
-          console.error(`Failed to process video ${video.id}:`, error);
-          failures.push({
-            videoId: video.id,
-            error: error.message || "Unknown error",
-          });
-        }
-      }
-
-      // Calculate next cursor
-      const hasMore = videosToProcess.length > batchSize;
-      const nextCursor = hasMore ? batch[batch.length - 1]?.id : null;
-
-      const duration = Date.now() - startTime;
-
-      res.json({
-        success: true,
-        processedVideos: processedCount,
-        totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
-        totalEarningsUsd: totalEarningsUsd.toFixed(2),
-        failures: failures.length,
-        failureDetails: failures,
-        hasMore,
-        nextCursor,
-        batchSize,
-        durationMs: duration,
-        timestamp: new Date().toISOString(),
-
- catch (err) {
-  console.error(err);
-   res.status(500).json({ error: "email_failed" });
-catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "email_failed" });
-}
-  }
