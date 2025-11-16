@@ -2020,10 +2020,7 @@ app.delete(
         deletedUserId: user.id,
       });
     } catch (error) {
-      console.error("[ADMIN] Error deleting user:", error);
-      return res.status(500).json({ message: "Failed to delete user" });
-    }
+    console.error("[ADMIN] Error deleting user:", error);
+    return res.status(500).json({ message: "Failed to delete user" });
   }
-);
-
-  
+});
