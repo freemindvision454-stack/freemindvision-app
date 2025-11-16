@@ -1004,7 +1004,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
     } catch (error) {
       console.error("Error sending gift:", error);
       res.status(500).json({ message: "Failed to send gift" });
-    }
   });
 
   // ===== CREDIT ROUTES =====
@@ -2022,7 +2021,4 @@ app.delete(
     } catch (error) {
       console.error("[ADMIN] Error deleting user:", error);
       return res.status(500).json({ message: "Failed to delete user" });
-    }
-  }
-);
-}).
+  });
