@@ -1961,14 +1961,20 @@ export async function registerRoutes(app: Express): Promise<Express> {
       if (expectedSecret && adminSecret !== expectedSecret) {
         console.warn(`Failed admin secret check for user ${userId}`);
         return res.status(403).json({ message: "Invalid admin credentials" });
-      }
+// --- ADMIN MIDDLEWARE FIXED ---
+try {
+  // ton code admin ici…
 
-      next();
-    } catch (error) {
-      console.error("Admin middleware error:", error);
-      res.status(500).json({ message: "Admin authorization failed" });
+  next();
+} catch (error) {
+  console.error("Admin middleware error:", error);
+  return res.status(500).json({ message: "Admin authorization failed" });
+}
 
-res.json({
+
+// --- PROCESS VIDEOS RESPONSE FIXED ---
+try {
+  res.json({
     success: true,
     processedVideos: processedCount,
     totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
@@ -1980,79 +1986,53 @@ res.json({
     batchSize,
     durationMS: duration,
     timestamp: new Date().toISOString(),
-});
+  });
 } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "email_failed" });
+  console.error(err);
+  return res.status(500).json({ error: "email_failed" });
 }
 
-  // Security: Uses environment-only secret to prevent unauthorized deletions
-  app.delete("/api/admin/delete-user", async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body;
-      const adminSecret = req.headers["x-admin-delete-secret"];
-      
-      // Require strong admin secret from environment
-      const expectedSecret = process.env.ADMIN_DELETE_SECRET;
-      
-      return res.status(403).json({ message: "Invalid admin credentials" });
-}
 
-next();
-} catch (error) {
-    console.error("Admin middleware error:", error);
-    res.status(500).json({ message: "Admin authorization failed" });
-}
-});
-
-// TEMP: Delete user by email (requires strong admin secret)
-// Security: Uses environment-only secret to prevent unauthorized deletions
+// --- ADMIN DELETE USER (SINGLE CLEAN VERSION) ---
 app.delete("/api/admin/delete-user", async (req: Request, res: Response) => {
-    try {
-        const { email } = req.body;
-        const adminSecret = req.headers["x-admin-delete-secret"];
+  try {
+    const { email } = req.body;
+    const adminSecret = req.headers["x-admin-delete-secret"];
+    const expectedSecret = process.env.ADMIN_DELETE_SECRET;
 
-        // Require strong admin secret from environment
-        const expectedSecret = process.env.ADMIN_DELETE_SECRET;
-
-        if (!expectedSecret) {
-            console.error("[SECURITY] ADMIN_DELETE_SECRET not configured - endpoint disabled");
-            return res.status(503).json({ message: "Admin delete endpoint not configured" });
-        }
-
-        if (!adminSecret || adminSecret !== expectedSecret) {
-            console.warn("[SECURITY] Invalid admin delete secret attempted");
-            return res.status(403).json({ message: "Invalid admin credentials" });
-        }
-
-        if (!email || typeof email !== "string") {
-            return res.status(400).json({ message: "Valid email is required" });
-        }
-
-        // Find user first
-        const user = await storage.findUserByEmail(email);
-
-        if (!user) {
-            return res.status(404).json({ message: "User not found with this email" });
-        }
-
-        // Audit log
-        console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
-
-        // Delete user from database
-        await db.delete(users).where(eq(users.email, email.toLowerCase()));
-
-        console.log(`[ADMIN] Successfully deleted user: ${email}`);
-
-        res.json({
-            message: "User deleted successfully",
-            deletedEmail: email,
-            deletedUserId: user.id
-        });
-    } catch (error) {
-        console.error("[ADMIN] Error deleting user:", error);
-        res.status(500).json({ message: "Failed to delete user" });
+    if (!expectedSecret) {
+      console.error("[SECURITY] ADMIN_DELETE_SECRET not configured - endpoint disabled");
+      return res.status(503).json({ message: "Admin delete endpoint not configured" });
     }
-});
 
-// Process view earnings batch job
+    if (!adminSecret || adminSecret !== expectedSecret) {
+      console.warn("[SECURITY] Invalid admin delete secret attempted");
+      return res.status(403).json({ message: "Invalid admin credentials" });
+    }
+
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ message: "Valid email is required" });
+    }
+
+    const user = await storage.findUserByEmail(email);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found with this email" });
+    }
+
+    console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
+
+    await db.delete(users).where(eq(users.email, email.toLowerCase()));
+
+    console.log(`[ADMIN] Successfully deleted user: ${email}`);
+
+    return res.json({
+      message: "User deleted successfully",
+      deletedEmail: email,
+      deletedUserId: user.id
+    });
+  } catch (error) {
+    console.error("[ADMIN] Error deleting user:", error);
+    return res.status(500).json({ message: "Failed to delete user" });
+  }
+});
