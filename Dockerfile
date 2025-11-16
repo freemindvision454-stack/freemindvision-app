@@ -20,16 +20,17 @@ RUN apt-get update -y && \
 
 COPY package*.json ./
 
-RUN npm install
+# installer proprement : npm ci
+RUN npm ci
 
 ############################
-# Build frontend + backend
+# Build stage
 ############################
 FROM deps AS build
 
 COPY . .
 
-# build Vite + compile TypeScript backend
+# Build Vite (frontend) + build serveur
 RUN npm run build
 
 ############################
@@ -40,12 +41,20 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy only what is needed
+# Copie node_modules de deps
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist       # Vite build
+
+# Build frontend → server/public
+COPY --from=build /app/dist ./server/public
+
+# Build backend → server/dist
 COPY --from=build /app/server/dist ./server/dist
+
 COPY package*.json ./
 
-EXPOSE 3000
+# DigitalOcean utilisera PORT automatiquement
+ENV PORT=8080
+EXPOSE 8080
 
+# Lancer le serveur backend
 CMD ["node", "server/dist/index.js"]
