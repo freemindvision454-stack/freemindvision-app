@@ -1912,127 +1912,118 @@ export async function registerRoutes(app: Express): Promise<Express> {
       console.error("Error fetching monetization settings:", error);
       res.status(500).json({ message: "Failed to fetch monetization settings" });
     }
-  });
-
-  // Check monetization eligibility
-  app.get("/api/monetization/eligibility", requiresAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      const settings = await storage.getMonetizationSettings();
-      const followerCount = await storage.getFollowerCount(userId);
-
-      res.json({
-        isMonetized: user?.isMonetized || false,
-        isEligible: followerCount >= settings.minFollowersForMonetization,
-        followerCount,
-        requiredFollowers: settings.minFollowersForMonetization,
-        pricePerViewFcfa: settings.pricePerViewFcfa,
-        pricePerViewUsd: settings.pricePerViewUsd,
-      });
-    } catch (error) {
-      console.error("Error checking monetization eligibility:", error);
-      res.status(500).json({ message: "Failed to check eligibility" });
-    }
-  });
-
   // ===== ADMIN ROUTES =====
 
-  // Admin middleware: Check isAdmin flag + shared-secret header
-  const requiresAdmin = async (req: any, res: Response, next: any) => {
-    try {
-      // Check authentication first
-      if (!req.isAuthenticated || !req.isAuthenticated() || !req.user?.claims?.sub) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-
-      // Check isAdmin flag
-      if (!user?.isAdmin) {
-        return res.status(403).json({ message: "Admin privileges required" });
-      }
-
-      // Optional: Check shared-secret header for extra security (can be added later)
-      const adminSecret = req.headers["x-admin-secret"];
-      const expectedSecret = process.env.ADMIN_SECRET;
-      
-      if (expectedSecret && adminSecret !== expectedSecret) {
-        console.warn(`Failed admin secret check for user ${userId}`);
-        return res.status(403).json({ message: "Invalid admin credentials" });
-// --- ADMIN MIDDLEWARE FIXED ---
-try {
-  // ton code admin ici…
-
-  next();
-} catch (error) {
-  console.error("Admin middleware error:", error);
-  return res.status(500).json({ message: "Admin authorization failed" });
-}
-
-
-// --- PROCESS VIDEOS RESPONSE FIXED ---
-try {
-  res.json({
-    success: true,
-    processedVideos: processedCount,
-    totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
-    totalEarningsUsd: totalEarningsUsd.toFixed(2),
-    failures: failures.length,
-    failureDetails: failures,
-    hasMore,
-    nextCursor,
-    batchSize,
-    durationMS: duration,
-    timestamp: new Date().toISOString(),
-  });
-} catch (err) {
-  console.error(err);
-  return res.status(500).json({ error: "email_failed" });
-}
-
-
-// --- ADMIN DELETE USER (SINGLE CLEAN VERSION) ---
-app.delete("/api/admin/delete-user", async (req: Request, res: Response) => {
+// Admin middleware: Check isAdmin flag + shared-secret header
+const requiresAdmin = async (req: any, res: Response, next: any) => {
   try {
-    const { email } = req.body;
-    const adminSecret = req.headers["x-admin-delete-secret"];
-    const expectedSecret = process.env.ADMIN_DELETE_SECRET;
-
-    if (!expectedSecret) {
-      console.error("[SECURITY] ADMIN_DELETE_SECRET not configured - endpoint disabled");
-      return res.status(503).json({ message: "Admin delete endpoint not configured" });
+    // Check authentication first
+    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user?.claims?.sub) {
+      return res.status(401).json({ message: "Authentication required" });
     }
 
-    if (!adminSecret || adminSecret !== expectedSecret) {
-      console.warn("[SECURITY] Invalid admin delete secret attempted");
+    const userId = req.user.claims.sub;
+    const user = await storage.getUser(userId);
+
+    // Check isAdmin flag
+    if (!user?.isAdmin) {
+      return res.status(403).json({ message: "Admin privileges required" });
+    }
+
+    // Optional: Check shared-secret header for extra security
+    const adminSecret = req.headers["x-admin-secret"];
+    const expectedSecret = process.env.ADMIN_SECRET;
+
+    if (expectedSecret && adminSecret !== expectedSecret) {
+      console.warn(`Failed admin secret check for user ${userId}`);
       return res.status(403).json({ message: "Invalid admin credentials" });
     }
 
-    if (!email || typeof email !== "string") {
-      return res.status(400).json({ message: "Valid email is required" });
-    }
-
-    const user = await storage.findUserByEmail(email);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found with this email" });
-    }
-
-    console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
-
-    await db.delete(users).where(eq(users.email, email.toLowerCase()));
-
-    console.log(`[ADMIN] Successfully deleted user: ${email}`);
-
-    return res.json({
-      message: "User deleted successfully",
-      deletedEmail: email,
-      deletedUserId: user.id
-    });
+    next();
   } catch (error) {
-    console.error("[ADMIN] Error deleting user:", error);
-    return res.status(500).json({ message: "Failed to delete user" });
+    console.error("Admin middleware error:", error);
+    return res.status(500).json({ message: "Admin authorization failed" });
   }
-});
+};
+
+// --- PROCESS VIDEOS RESPONSE FIXED ---
+const sendProcessVideosResponse = (
+  res: Response,
+  processedCount: number,
+  totalEarningsFcfa: number,
+  totalEarningsUsd: number,
+  failures: any[],
+  hasMore: boolean,
+  nextCursor: any,
+  batchSize: number,
+  duration: number
+) => {
+  try {
+    return res.json({
+      success: true,
+      processedVideos: processedCount,
+      totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
+      totalEarningsUsd: totalEarningsUsd.toFixed(2),
+      failures: failures.length,
+      failureDetails: failures,
+      hasMore,
+      nextCursor,
+      batchSize,
+      durationMS: duration,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "email_failed" });
+  }
+};
+
+// --- ADMIN DELETE USER ---
+app.delete(
+  "/api/admin/delete-user",
+  requiresAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      const adminSecret = req.headers["x-admin-delete-secret"];
+      const expectedSecret = process.env.ADMIN_DELETE_SECRET;
+
+      if (!expectedSecret) {
+        console.error("[SECURITY] ADMIN_DELETE_SECRET not configured - endpoint disabled");
+        return res.status(503).json({ message: "Admin delete endpoint not configured" });
+      }
+
+      if (!adminSecret || adminSecret !== expectedSecret) {
+        console.warn("[SECURITY] Invalid admin delete secret attempted");
+        return res.status(403).json({ message: "Invalid admin credentials" });
+      }
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "Valid email is required" });
+      }
+
+      const user = await storage.findUserByEmail(email);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found with this email" });
+      }
+
+      console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
+
+      await db.delete(users).where(eq(users.email, email.toLowerCase()));
+
+      console.log(`[ADMIN] Successfully deleted user: ${email}`);
+
+      return res.json({
+        message: "User deleted successfully",
+        deletedEmail: email,
+        deletedUserId: user.id,
+      });
+    } catch (error) {
+      console.error("[ADMIN] Error deleting user:", error);
+      return res.status(500).json({ message: "Failed to delete user" });
+    }
+  }
+);
+
+  
