@@ -2109,17 +2109,12 @@ export async function registerRoutes(app: Express): Promise<Express> {
         batchSize,
         durationMs: duration,
         timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Error processing view earnings batch:", error);
-      res.status(500).json({ message: "Failed to process view earnings" });
-,
-      html: `<p>${message}</p><p>From: ${email}</p>`
-    });
+      catch (error) {
+   console.error("Error processing view earnings batch:", error);
+  res.status(500).json({ message: "Failed to process view earnings" });
+  return;
 
-    res.json({ ok: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "email_failed" });
-  }
-});
+
+ catch (err) {
+  console.error(err);
+   res.status(500).json({ error: "email_failed" });
