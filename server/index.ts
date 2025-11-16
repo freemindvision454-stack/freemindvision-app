@@ -4,12 +4,15 @@ import { registerRoutes } from "./routes";
 import { setupWebSocket } from "./websocket";
 import { runMigrations } from "./migrate";
 import path from "path";
+import { fileURLToPath } from "url";
+
+// Fix pour ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
-/* ----------------------------
-   RAW BODY HANDLING
------------------------------ */
+/* RAW BODY */
 declare module "http" {
   interface IncomingMessage {
     rawBody?: Buffer;
@@ -26,9 +29,7 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-/* ----------------------------
-   SIMPLE LOGGER
------------------------------ */
+/* LOGGER */
 app.use((req, res, next) => {
   const start = Date.now();
   const originalJson = res.json;
@@ -42,7 +43,6 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-
     if (req.path.startsWith("/api")) {
       console.log(
         `${req.method} ${req.path} ${res.statusCode} in ${duration}ms :: ${JSON.stringify(
@@ -55,19 +55,17 @@ app.use((req, res, next) => {
   next();
 });
 
-/* ----------------------------
-   MAIN ASYNC STARTUP
------------------------------ */
+/* STARTUP */
 (async () => {
   try {
     const isProd = process.env.NODE_ENV === "production";
-    const PORT = parseInt(process.env.PORT || "5000", 10);
+    const PORT = parseInt(process.env.PORT || "8080", 10);
 
     console.log(`\n[SERVER] Starting...`);
     console.log(`[SERVER] Mode: ${isProd ? "PRODUCTION" : "DEV"}`);
     console.log(`[SERVER] Port: ${PORT}`);
 
-    /*  HEALTH CHECK  */
+    /* HEALTH CHECK */
     app.get("/health", (_req, res) => {
       res.status(200).json({
         ok: true,
@@ -76,10 +74,10 @@ app.use((req, res, next) => {
       });
     });
 
-    /*  ROUTES  */
+    /* ROUTES */
     await registerRoutes(app);
 
-    /*  ERROR HANDLER  */
+    /* ERROR HANDLER */
     app.use(
       (err: any, _req: Request, res: Response, _next: NextFunction) => {
         console.error("API Error:", err);
@@ -89,12 +87,10 @@ app.use((req, res, next) => {
       }
     );
 
-    /* ----------------------------
-       PRODUCTION: SERVE STATIC FILES
-    ----------------------------- */
+    /* STATIC FILES */
     if (isProd) {
-      const publicPath = path.join(process.cwd(), "server", "public");
-      console.log(`[SERVER] Serving static files from: ${publicPath}`);
+      const publicPath = path.join(__dirname, "public");
+      console.log(`[SERVER] Serving static from: ${publicPath}`);
 
       app.use(express.static(publicPath));
 
@@ -103,19 +99,13 @@ app.use((req, res, next) => {
       });
     }
 
-    /* ----------------------------
-       START HTTP SERVER
-    ----------------------------- */
+    /* START SERVER */
     const server = createServer(app);
 
-    /* WEBSOCKETS */
     setupWebSocket(server);
 
-    /* ----------------------------
-       START LISTENING
-    ----------------------------- */
     server.listen(PORT, "0.0.0.0", () => {
-      console.log(`\n[SERVER] Running at http://0.0.0.0:${PORT}`);
+      console.log(`[SERVER] Running at http://0.0.0.0:${PORT}`);
     });
 
   } catch (error) {
