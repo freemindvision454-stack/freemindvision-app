@@ -2109,11 +2109,6 @@ export async function registerRoutes(app: Express): Promise<Express> {
         batchSize,
         durationMs: duration,
         timestamp: new Date().toISOString(),
-      catch (error) {
-   console.error("Error processing view earnings batch:", error);
-  res.status(500).json({ message: "Failed to process view earnings" });
-  return;
-
 
  catch (err) {
   console.error(err);
