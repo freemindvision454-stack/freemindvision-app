@@ -1056,30 +1056,11 @@ app.get("/api/credit-packages", async (req, res) => {
           credits: pkg.credits + pkg.bonus,
           packageName: pkg.name,
         },
-        description: `Purchase ${pkg.name} - ${pkg.credits + pkg.bonus} YimiCoins`,
-      });
-
-      // Create pending transaction
-      await storage.createTransaction({
-        userId,
-        type: "purchase",
-        amount: pkg.priceUsd,
-        credits: pkg.credits + pkg.bonus,
-        paymentMethod: "stripe",
-        paymentProvider: paymentIntent.id,
-        description: `Purchasing ${pkg.name}`,
-        status: "pending",
-      });
-
-      res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error: any) {
-      console.error("Error creating payment intent:", error);
-      res.status(500).json({ message: "Failed to create payment intent: " + error.message });
-    }
-  });
-
-  // Stripe webhook handler
-  app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), async (req: any, res) => {
+        // Stripe webhook handler
+app.post(
+  "/api/webhooks/stripe",
+  express.raw({ type: "application/json" }),
+  async (req: any, res) => {
     if (!stripe) {
       return res.status(503).json({ message: "Stripe not configured" });
     }
@@ -1089,6 +1070,30 @@ app.get("/api/credit-packages", async (req, res) => {
 
     try {
       if (process.env.STRIPE_WEBHOOK_SECRET) {
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+      } else {
+        return res
+          .status(503)
+          .json({ message: "Stripe webhook secret not configured" });
+      }
+
+      // À partir d'ici tu peux gérer les events Stripe
+      // Exemple :
+      // if (event.type === "payment_intent.succeeded") { ... }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error("Stripe webhook error:", error);
+      res
+        .status(400)
+        .json({ message: "Webhook signature verification failed" });
+    }
+  }
+);
         // Production: Verify webhook signature
         event = stripe.webhooks.constructEvent(
           req.body,
@@ -1988,29 +1993,29 @@ app.delete(
         console.warn("[SECURITY] Invalid admin delete secret attempted");
         return res.status(403).json({ message: "Invalid admin credentials" });
       }
+if (!email || typeof email !== "string") {
+  return res.status(400).json({ message: "Valid email is required" });
+}
 
-      if (!email || typeof email !== "string") {
-        return res.status(400).json({ message: "Valid email is required" });
-      }
+const user = await storage.findUserByEmail(email);
 
-      const user = await storage.findUserByEmail(email);
+if (!user) {
+  return res.status(404).json({ message: "User not found with this email" });
+}
 
-      if (!user) {
-        return res.status(404).json({ message: "User not found with this email" });
-      }
+console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
 
-      console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
+await db.delete(users).where(eq(users.email, email.toLowerCase()));
 
-      await db.delete(users).where(eq(users.email, email.toLowerCase()));
+console.log(`[ADMIN] Successfully deleted user: ${email}`);
 
-      console.log(`[ADMIN] Successfully deleted user: ${email}`);
-
-      return res.json({
-        message: "User deleted successfully",
-        deletedEmail: email,
-        deletedUserId: user.id,
-      });
-    } catch (error) {
-      console.error("[ADMIN] Error deleting user:", error);
-      return res.status(500).json({ message: "Failed to delete user" });
-  });
+return res.json({
+  message: "User deleted successfully",
+  deletedEmail: email,
+  deletedUserId: user.id,
+});
+} catch (error) {
+  console.error("[ADMIN] Error deleting user:", error);
+  return res.status(500).json({ message: "Failed to delete user" });
+}
+);
