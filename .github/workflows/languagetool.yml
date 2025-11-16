@@ -18,3 +18,31 @@ jobs:
         uses: ernxst/languagetool-action@v1
         with:
           files: "**/*.md"
+name: LanguageTool Full Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run LanguageTool
+        uses: ernxst/languagetool-action@v1
+        with:
+          files: |
+            **/*.md
+            **/*.txt
+            **/*.html
+            **/*.js
+            **/*.ts
+            **/*.jsx
+            **/*.tsx
+            **/*.json
