@@ -1,16 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
+    "module": "CommonJS",
     "moduleResolution": "node",
-    "rootDir": "./",
-    "outDir": "./dist",
+    "rootDir": "server",
+    "outDir": "server/dist",
+    "strict": true,
+
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["server/**/*.ts"],
+  "exclude": ["node_modules", "dist", "server/dist"]
 }
