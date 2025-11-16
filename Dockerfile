@@ -1,48 +1,40 @@
-# ----------------------------
-# Phase 1 : Build
-# ----------------------------
-FROM node:18 AS builder
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-WORKDIR /app
+export default defineConfig(async () => {
+  const plugins = [
+    react(),
+    runtimeErrorOverlay(),
+  ];
 
-# Copier les fichiers de config
-COPY package.json package-lock.json ./
-COPY tsconfig.json ./
+  if (process.env.NODE_ENV !== "production" && process.env.REPL_ID) {
+    const cartographer = await import("@replit/vite-plugin-cartographer");
+    const devBanner = await import("@replit/vite-plugin-dev-banner");
+    plugins.push(cartographer.cartographer());
+    plugins.push(devBanner.devBanner());
+  }
 
-# Copier tout le projet
-COPY . .
-
-# Installer les dépendances
-RUN npm ci
-
-# Build du frontend
-RUN npm run build
-
-# Copier le build frontend vers le backend
-RUN mkdir -p server/public && cp -r dist/* server/public/
-
-# Build du backend
-RUN npm run build:server
-
-
-# ----------------------------
-# Phase 2 : Run
-# ----------------------------
-FROM node:18 AS runner
-
-WORKDIR /app
-
-# Copier uniquement ce qui est nécessaire
-COPY --from=builder /app/package.json package.json
-COPY --from=builder /app/package-lock.json package-lock.json
-COPY --from=builder /app/server ./server
-
-# Installer uniquement prod deps
-RUN npm ci --omit=dev
-
-ENV NODE_ENV=production
-ENV PORT=8080
-
-EXPOSE 8080
-
-CMD ["node", "server/dist/index.js"]
+  return {
+    plugins,
+    resolve: {
+      alias: {
+        "@": path.resolve(import.meta.dirname, "client", "src"),
+        "@shared": path.resolve(import.meta.dirname, "shared"),
+        "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      },
+    },
+    root: path.resolve(import.meta.dirname, "client"),
+    build: {
+      outDir: path.resolve(import.meta.dirname, "dist/public"),
+      emptyOutDir: true,
+    },
+    server: {
+      fs: {
+        strict: true,
+        deny: ["**/.*"],
+      },
+    },
+  };
+});
