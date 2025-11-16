@@ -1,20 +1,20 @@
 # syntax=docker/dockerfile:1
 
-###############################
+################################
 # Base image
-###############################
+################################
 ARG NODE_VERSION=20.18.1
 FROM node:${NODE_VERSION}-slim AS base
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-###############################
+################################
 # Build stage
-###############################
+################################
 FROM base AS build
 
-# Install system deps required to build node modules
+# Install dependencies needed to build Node modules
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     build-essential \
@@ -22,35 +22,35 @@ RUN apt-get update -qq && \
     pkg-config && \
     rm -rf /var/lib/apt/lists/*
 
-# Install dependencies (dev included for Vite build)
-COPY package.json package-lock.json ./
-RUN npm ci
+# Install ALL dependencies (dev included)
+COPY package*.json ./
+RUN npm install
 
-# Copy source code
+# Copy source
 COPY . .
 
 # Build frontend
-RUN npx vite build
+RUN npm run build
 
-# Move built frontend to server/public
-RUN mkdir -p server/public && cp -r dist/public/* server/public/
+# Copy built frontend to server/public
+RUN mkdir -p server/public && cp -r dist/* server/public/
 
-###############################
-# Production image
-###############################
+################################
+# Production stage
+################################
 FROM base
 
-# Copy app including built frontend
+# Copy app files and built frontend
 COPY --from=build /app /app
 
-# Install only production dependencies
-RUN npm ci --omit=dev
+# Install ONLY production dependencies
+RUN npm install --omit=dev
 
-EXPOSE 5000
+# Expose correct DO port
+EXPOSE 3000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/health', (r) => process.exit(r.statusCode===200?0:1))"
+# Optional healthcheck
+HEALTHCHECK CMD curl -f http://localhost:3000/health || exit 1
 
-# Start server
+# Start backend server
 CMD ["node", "server/index.js"]
