@@ -4,11 +4,9 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { fileURLToPath } from "url";
 
-// Fix import.meta.dirname
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(async () => {
-  // Plugins conditionnels Replit
   const extraPlugins =
     process.env.NODE_ENV !== "production" && process.env.REPL_ID
       ? [
@@ -18,11 +16,9 @@ export default defineConfig(async () => {
       : [];
 
   return {
-    plugins: [
-      react(),
-      runtimeErrorOverlay(),
-      ...extraPlugins, // Ajout propre
-    ],
+    plugins: [react(), runtimeErrorOverlay(), ...extraPlugins],
+
+    root: path.resolve(__dirname, "client"),
 
     resolve: {
       alias: {
@@ -32,10 +28,11 @@ export default defineConfig(async () => {
       },
     },
 
-    root: path.resolve(__dirname, "client"),
-
     build: {
-      outDir: path.resolve(__dirname, "dist/public"),
+      /** Le dossier final DOIT être /dist, pas /dist/public */
+      outDir: path.resolve(__dirname, "dist"),
+
+      /** Supprimer avant build */
       emptyOutDir: true,
     },
 
