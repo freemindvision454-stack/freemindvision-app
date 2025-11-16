@@ -3,18 +3,15 @@
 ################################
 # Base image
 ################################
-ARG NODE_VERSION=20.18.1
-FROM node:${NODE_VERSION}-slim AS base
-
+FROM node:20.18.1-slim AS base
 WORKDIR /app
-ENV NODE_ENV=production
 
 ################################
-# Build stage
+# Install dependencies
 ################################
-FROM base AS build
+FROM base AS deps
 
-# Install dependencies needed to build Node modules
+# Install tools required for native modules
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
     build-essential \
@@ -22,35 +19,39 @@ RUN apt-get update -qq && \
     pkg-config && \
     rm -rf /var/lib/apt/lists/*
 
-# Install ALL dependencies (dev included)
+# Install ALL dependencies (dev included) for building
 COPY package*.json ./
 RUN npm install
 
-# Copy source
+################################
+# Build stage
+################################
+FROM deps AS build
+
+# Copy full project
 COPY . .
 
-# Build frontend
+# Build frontend + backend
 RUN npm run build
-
-# Copy built frontend to server/public
-RUN mkdir -p server/public && cp -r dist/* server/public/
 
 ################################
 # Production stage
 ################################
-FROM base
+FROM base AS prod
 
-# Copy app files and built frontend
+ENV NODE_ENV=production
+
+# Copy only build result + node_modules
 COPY --from=build /app /app
 
-# Install ONLY production dependencies
+# Install only production dependencies
 RUN npm install --omit=dev
 
-# Expose correct DO port
+# Expose port for DigitalOcean
 EXPOSE 3000
 
-# Optional healthcheck
+# Healthcheck (optional)
 HEALTHCHECK CMD curl -f http://localhost:3000/health || exit 1
 
-# Start backend server
-CMD ["node", "server/index.js"]
+# Start server (compiled TypeScript)
+CMD ["node", "server/dist/index.js"]
