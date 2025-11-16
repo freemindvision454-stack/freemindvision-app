@@ -6,7 +6,7 @@ import { runMigrations } from "./migrate";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Fix pour ES modules
+// Fix ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -65,15 +65,6 @@ app.use((req, res, next) => {
     console.log(`[SERVER] Mode: ${isProd ? "PRODUCTION" : "DEV"}`);
     console.log(`[SERVER] Port: ${PORT}`);
 
-    /* HEALTH CHECK */
-    app.get("/health", (_req, res) => {
-      res.status(200).json({
-        ok: true,
-        env: process.env.NODE_ENV,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
     /* ROUTES */
     await registerRoutes(app);
 
@@ -87,13 +78,16 @@ app.use((req, res, next) => {
       }
     );
 
-    /* STATIC FILES */
+    /* STATIC FILES - FIX DIGITALOCEAN */
     if (isProd) {
-      const publicPath = path.join(__dirname, "public");
+      const publicPath = path.join(process.cwd(), "dist");
+
       console.log(`[SERVER] Serving static from: ${publicPath}`);
 
+      // Serve frontend
       app.use(express.static(publicPath));
 
+      // SPA fallback
       app.get("*", (_req, res) => {
         res.sendFile(path.join(publicPath, "index.html"));
       });
