@@ -4,7 +4,7 @@
     "module": "CommonJS",
     "moduleResolution": "node",
 
-    "rootDir": "server",
+    "rootDir": "./",
     "outDir": "dist",
 
     "strict": true,
@@ -15,6 +15,6 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["server/**/*.ts"],
+  "include": ["./**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
