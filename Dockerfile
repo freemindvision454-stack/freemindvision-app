@@ -1,45 +1,56 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { fileURLToPath } from "url";
+# syntax=docker/dockerfile:1
 
-// -------- FIX pour que ça marche partout (Docker, Node, Replit) ----------
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+###############################
+# Base image
+###############################
+ARG NODE_VERSION=20.18.1
+FROM node:${NODE_VERSION}-slim AS base
 
-export default defineConfig(async () => {
-  const plugins = [
-    react(),
-    runtimeErrorOverlay(),
-  ];
+WORKDIR /app
+ENV NODE_ENV=production
 
-  if (process.env.NODE_ENV !== "production" && process.env.REPL_ID) {
-    const cartographer = await import("@replit/vite-plugin-cartographer");
-    const devBanner = await import("@replit/vite-plugin-dev-banner");
-    plugins.push(cartographer.cartographer());
-    plugins.push(devBanner.devBanner());
-  }
+###############################
+# Build stage
+###############################
+FROM base AS build
 
-  return {
-    plugins,
-    resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "client", "src"),
-        "@shared": path.resolve(__dirname, "shared"),
-        "@assets": path.resolve(__dirname, "attached_assets"),
-      },
-    },
-    root: path.resolve(__dirname, "client"),
-    build: {
-      outDir: path.resolve(__dirname, "dist/public"),
-      emptyOutDir: true,
-    },
-    server: {
-      fs: {
-        strict: true,
-        deny: ["**/.*"],
-      },
-    },
-  };
-});
+# Install system deps required to build node modules
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+    build-essential \
+    python3 \
+    pkg-config && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install dependencies (dev included for Vite build)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build frontend
+RUN npx vite build
+
+# Move built frontend to server/public
+RUN mkdir -p server/public && cp -r dist/public/* server/public/
+
+###############################
+# Production image
+###############################
+FROM base
+
+# Copy app including built frontend
+COPY --from=build /app /app
+
+# Install only production dependencies
+RUN npm ci --omit=dev
+
+EXPOSE 5000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:5000/health', (r) => process.exit(r.statusCode===200?0:1))"
+
+# Start server
+CMD ["node", "server/index.js"]
