@@ -978,56 +978,48 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
       if (!giftType) {
         return res.status(404).json({ message: "Gift type not found" });
-      }
+}
 
-      const totalCost = giftType.creditCost * quantity;
+const totalCost = giftType.creditCost * quantity;
 
-      // Check sender balance
-      const sender = await storage.getUser(senderId);
-      if (!sender || sender.creditBalance < totalCost) {
-        return res.status(400).json({ message: "Insufficient credits" });
-      }
+// Check sender balance
+const sender = await storage.getUser(senderId);
+if (!sender || sender.creditBalance < totalCost) {
+  return res.status(400).json({ message: "Insufficient credits" });
+}
 
-      // Deduct credits from sender
-      await storage.updateUserCredits(senderId, -totalCost);
+// Deduct credits from sender
+await storage.updateUserCredits(senderId, -totalCost);
 
-      // Send the gift (this also updates recipient earnings)
-      const gift = await storage.sendGift({
-        giftTypeId,
-        senderId,
-        recipientId,
-        videoId: videoId || null,
-        quantity,
-      });
+// Send the gift (this also updates recipient earnings)
+const gift = await storage.sendGift({
+  giftTypeId,
+  senderId,
+  recipientId,
+  videoId: videoId || null,
+  quantity,
+});
 
-      res.json(gift);
-    } catch (error) {
-      console.error("Error sending gift:", error);
-      res.status(500).json({ message: "Failed to send gift" });
-  });
+res.json(gift);
 
-  // ===== CREDIT ROUTES =====
+} catch (error) {
+  console.error("Error sending gift:", error);
+  res.status(500).json({ message: "Failed to send gift" });
+}
+});   // ← FERME LA ROUTE CORRECTEMENT
 
-  // Get credit packages
-  app.get("/api/credit-packages", async (req, res) => {
-    try {
-      const packages = await storage.getCreditPackages();
-      res.json(packages);
-    } catch (error) {
-      console.error("Error fetching credit packages:", error);
-      res.status(500).json({ message: "Failed to fetch credit packages" });
-    }
-  });
+// ===== CREDIT ROUTES =====
 
-  // Create Stripe payment intent for credit purchase
-  app.post("/api/create-payment-intent", requiresAuth, async (req: any, res) => {
-    try {
-      if (!stripe) {
-        return res.status(503).json({ message: "Payment processing not configured. Please add Stripe API keys." });
-      }
-
-      const userId = req.user.claims.sub;
-      const { packageId } = req.body;
+// Get credit packages
+app.get("/api/credit-packages", async (req, res) => {
+  try {
+    const packages = await storage.getCreditPackages();
+    res.json(packages);
+  } catch (error) {
+    console.error("Error fetching credit packages:", error);
+    res.status(500).json({ message: "Failed to fetch credit packages" });
+  }
+});
 
       const packages = await storage.getCreditPackages();
       const pkg = packages.find((p) => p.id === packageId);
