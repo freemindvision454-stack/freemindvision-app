@@ -7,51 +7,45 @@ FROM node:20.18.1-slim AS base
 WORKDIR /app
 
 ################################
-# Install dependencies
+# Dependencies Stage
 ################################
 FROM base AS deps
 
-# Install tools required for native modules
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
-    build-essential \
-    python3 \
-    pkg-config && \
+        build-essential \
+        python3 \
+        pkg-config && \
     rm -rf /var/lib/apt/lists/*
 
-# Install ALL dependencies (dev included) for building
 COPY package*.json ./
+
+# Install ALL dependencies (dev + prod)
 RUN npm install
 
 ################################
-# Build stage
+# Build Stage
 ################################
 FROM deps AS build
 
-# Copy full project
 COPY . .
 
-# Build frontend + backend
 RUN npm run build
 
 ################################
-# Production stage
+# Production Stage
 ################################
-FROM base AS prod
+FROM node:20.18.1-slim AS prod
+WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy only build result + node_modules
-COPY --from=build /app /app
+# Copy ONLY build assets + production node_modules
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server/dist ./server/dist
+COPY package*.json ./
 
-# Install only production dependencies
-RUN npm install --omit=dev
-
-# Expose port for DigitalOcean
 EXPOSE 3000
 
-# Healthcheck (optional)
-HEALTHCHECK CMD curl -f http://localhost:3000/health || exit 1
-
-# Start server (compiled TypeScript)
 CMD ["node", "server/dist/index.js"]
