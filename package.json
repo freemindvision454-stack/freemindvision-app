@@ -9,12 +9,9 @@
   "scripts": {
     "dev": "tsx server/index.ts",
 
-    "format": "prettier --write .",
-
     "build:server": "tsc -p server/tsconfig.json",
     "build:client": "vite build",
-
-    "build": "npm run format && npm run build:server && npm run build:client",
+    "build": "npm run build:server && npm run build:client",
 
     "prestart": "npm run build",
     "start": "node server/dist/index.js",
@@ -69,8 +66,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.47",
 
-    "drizzle-kit": "^0.31.4",
-    "prettier": "^3.2.5"
+    "drizzle-kit": "^0.31.4"
   },
 
   "engines": {
