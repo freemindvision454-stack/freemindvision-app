@@ -983,27 +983,8 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
 const totalCost = giftType.creditCost * quantity;
 
-// Check sender balance
-const sender = await storage.getUser(senderId);
-if (!sender || sender.creditBalance < totalCost) {
-  return res.status(400).json({ message: "Insufficient credits" });
-}
-// Deduct credits from sender
-await storage.updateUserCredits(senderId, -totalCost);
-
-// Send the gift (this also updates recipient earnings)
-const gift = await storage.sendGift({
-  giftTypeId,
-  senderId,
-  recipientId,
-  videoId: videoId || null,
-  quantity,
-});
-
-res.json(gift);
-if (userId && planId && session.mode === "subscription") {
-// Subscription checkout completed - subscription will be created separately
-          console.log(`✅ Checkout completed for user ${userId}, plan ${planId});        
+// Check sender balanceb will be created separately
+          console.log});(`✅ Checkout completed for user ${userId}, plan ${planId});        
       } 
       else if (event.type === "customer.subscription.created") {
         if (!stripe) {
@@ -1051,10 +1032,8 @@ if (userId && planId && session.mode === "subscription") {
           );
 
           console.log(`🔄 Subscription updated: ${subscription.id}`);
-        } catch (err: any) {
-          console.error("Error updating subscription status:", err);
-        }
-      } 
+        } catch (err: any}); {
+          console.error("Error updating subscription status:", err});;
       else {
         console.log(`⚠️ Unhandled Stripe event type: ${event.type}`);
       }
@@ -1124,7 +1103,6 @@ app.post("/api/buy-package", async (req, res) => {
 
     if (!pkg) {
       return res.status(404).json({ message: "Package not found" });
-    }
     const user = await storage.getUser(userId});
     if (!user) {
       return res.status(404).json({ message: "User not found" });
