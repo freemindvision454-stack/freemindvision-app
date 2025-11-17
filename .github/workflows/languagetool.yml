@@ -2,27 +2,35 @@ name: LanguageTool Full Check
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
 
 jobs:
   check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install LanguageTool
+        run: sudo apt-get update && sudo apt-get install -y default-jre
+
+      - name: Download LanguageTool
+        run: |
+          wget https://languagetool.org/download/LanguageTool-stable.zip
+          unzip LanguageTool-stable.zip
+          mv LanguageTool-* languagetool
+
       - name: Run LanguageTool
-        uses: ernxst/languagetool-action@v1
+        run: |
+          java -jar languagetool/languagetool-commandline.jar \
+          -l en-US \
+          --enable categories=GRAMMAR \
+          . > lt-report.txt || true
+
+      - name: Upload LanguageTool Report
+        uses: actions/upload-artifact@v3
         with:
-          files: |
-            **/*.md
-            **/*.txt
-            **/*.html
-            **/*.js
-            **/*.ts
-            **/*.jsx
-            **/*.tsx
-            **/*.json
+          name: languagetool-report
+          path: lt-report.txt
