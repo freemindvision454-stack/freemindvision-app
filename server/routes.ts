@@ -1,4 +1,4 @@
-
+se
 import adminRoutes from "./admin.js";
 import type { Express, Request, Response } from "express";
 import express from "express";
@@ -1798,56 +1798,59 @@ app.post(
 
       if (existingReferral.length > 0) {
         return res.status(400).json({ message: "You have already used a referral code" });
-      }
+     // Create the referral
+const bonusAmount = 100; // 100 YimiCoins bonus
+const referral = await storage.createReferral({
+  referrerId,
+  referredId: userId,
+  referralCode,
+  bonusAwarded: bonusAmount,
+  status: "completed",
+});
 
-      // Create the referral
-      const bonusAmount = 100; // 100 YimiCoins bonus
-      const referral = await storage.createReferral({
-        referrerId,
-        referredId: userId,
-        referralCode,
-        bonusAwarded: bonusAmount,
-        status: "completed",
-      });
+// Award bonus to referrer
+await storage.updateUserCredits(referrerId, bonusAmount);
 
-      // Award bonus to referrer
-      await storage.updateUserCredits(referrerId, bonusAmount);
+// Create notification for referrer
+await storage.createNotification({
+  userId: referrerId,
+  type: "referral",
+  message: `Félicitations ! Vous avez gagné ${bonusAmount} YimiCoins grâce à votre parrainage`,
+});
+res.json({ success: true, referral });
 
-      // Create notification for referrer
-      await storage.createNotification({
-        userId: referrerId,
-        type: "referral",
-        message: `Félicitations ! Vous avez gagné ${bonusAmount} YimiCoins grâce à votre parrainage });
-      res.json({ success: true, referral });
-    } catch (error) {
-      console.error("Error applying referral code:", error);
-      res.status(500).json({ message: "Failed to apply referral code" });
-  // ===== BADGE ROUTES =====
-  // Get all badge types
-  app.get("/api/badges/types", async (req, res) => {
-    try {
-      const badgeTypes = await storage.getAllBadgeTypes();
-      res.json(badgeTypes});
-    } catch (error) {
-      console.error("Error fetching badge types:", error);
-      res.status(500).json({ message: "Failed to fetch badge types" });
-    }
-  });
+} catch (error) {
+  console.error("Error applying referral code:", error);
+  res.status(500).json({ message: "Failed to apply referral code" });
+// ===== BADGE ROUTES =====
 
-  // Get user badges
-  app.get("/api/users/:userId/badges", async (req, res) => {
-    try {
-      const badges = await storage.getUserBadges(req.params.userId);
-      res.json(badges);
-    } catch (error) {
-      console.error("Error fetching user badges:", error);
-      res.status(500).json({ message: "Failed to fetch user badges" });
-    }
-  });
+// Get all badge types
+app.get("/api/badges/types", async (req, res) => {
+  try {
+    const badgeTypes = await storage.getAllBadgeTypes();
+    res.json(badgeTypes);   // <-- parenthèse corrigée ici
+  } catch (error) {
+    console.error("Error fetching badge types:", error);
+    res.status(500).json({ message: "Failed to fetch badge types" });
+  }
+});
 
-  // Check and award badges for current user
-  app.post("/api/badges/check", requiresAuth, async (req: any, res) => {
-    try {
+// Get user badges
+app.get("/api/users/:userId/badges", async (req, res) => {
+  try {
+    const badges = await storage.getUserBadges(req.params.userId);
+    res.json(badges);
+  } catch (error) {
+    console.error("Error fetching user badges:", error);
+    res.status(500).json({ message: "Failed to fetch user badges" });
+  }
+});
+
+// Check and award badges for current user
+app.post("/api/badges/check", requiresAuth, async (req: any, res) => {
+  try { 
+
+      
       const userId = req.user.claims.sub;
       const newBadges = await storage.checkAndAwardBadges(userId);
       res.json({ newBadges, count: newBadges.length });
@@ -1895,62 +1898,69 @@ app.post(
       const plans = await storage.getSubscriptionPlans({ planId });
       if (plans.length === 0) {
         return res.status(404).json({ message: "Plan not found" });
-      }
+  const plan = plans[0];
+if (!plan.stripePriceId) {
+  return res.status(500).json({ message: "Plan not configured for Stripe" });
+}
 
-      const plan = plans[0];
-      if (!plan.stripePriceId) {
-        return res.status(500).json({ message: "Plan not configured for Stripe" });
-      }
+const user = await storage.getUser(userId);
+if (!user) {
+  return res.status(404).json({ message: "User not found" });
+}
 
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+const session = await stripe.checkout.sessions.create({
+  mode: "subscription",
+  payment_method_types: ["card"],
+  line_items: [
+    {
+      price: plan.stripePriceId,
+      quantity: 1,
+    },
+  ],
+  customer_email: user.email || undefined,
+  metadata: {
+    userId,
+    planId,
+  },
+  success_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/dashboard?subscription=success`,
+  cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/subscriptions?subscription=cancelled`,
+});
 
-      const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price: plan.stripePriceId,
-            quantity: 1,
-          },
-        ],
-        customer_email: user.email || undefined,
-        metadata: {
-          userId,
-          planId,
-        },
-        success_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/dashboard?subscription=success`,
-        cancel_url: `${process.env.REPLIT_DEV_DOMAIN || 'http://localhost:5000'}/subscriptions?subscription=cancelled`,
-      });
+res.json({ url: session.url });
+} catch (error) {
+  console.error("Error creating subscription checkout:", error);
+  res.status(500).json({ message: "Failed to create checkout session" });
+}
 
-      res.json({ url: session.url });
-    } catch (error) {
-      console.error("Error creating subscription checkout:", error});
-      res.status(500).json({ message: "Failed to create checkout session" });
-  // Cancel subscription});
-  app.post("/api/subscriptions/cancel", requiresAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub});
-      await storage.cancelSubscription(userId);
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error cancelling subscription:", error});
-      res.status(500).json({ message: "Failed to cancel subscription" });
-  // ===== VERIFIED BADGE ROUTES =====
+// Cancel subscription
+app.post("/api/subscriptions/cancel", requiresAuth, async (req: any, res) => {
+  try {
+    const userId = req.user.claims.sub;
+    await storage.cancelSubscription(userId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error cancelling subscription:", error);
+    res.status(500).json({ message: "Failed to cancel subscription" });
+  }
+});
 
-  // Get badge purchase status
-  app.get("/api/verified-badge/status", requiresAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const purchase = await storage.getBadgePurchase(userId);
-      res.json(purchase || null);
-    } catch (error) {
-      console.error("Error fetching badge status:", error);
-      res.status(500).json({ message: "Failed to fetch badge status" });
-    }
-  });
+// ===== VERIFIED BADGE ROUTES =====
+
+// Get badge purchase status
+app.get("/api/verified-badge/status", requiresAuth, async (req: any, res) => {
+  try {
+    const userId = req.user.claims.sub;
+    const purchase = await storage.getBadgePurchase(userId);
+    res.json(purchase || null);
+  } catch (error) {
+    console.error("Error fetching badge status:", error);
+    res.status(500).json({ message: "Failed to fetch badge status" });
+  }
+});    
+
+      
+    
+  
 
   // Create verified badge purchase
   app.post("/api/verified-badge/purchase", requiresAuth, async (req: any, res) => {
@@ -1997,109 +2007,107 @@ app.post(
     try {
       if (!req.isAuthenticated || !req.isAuthenticated() || !req.user?.claims?.sub) {
         return res.status(401).json({ message: "Authentication required" });
+ const userId = req.user.claims.sub;
+const user = await storage.getUser(userId);
+
+if (!user?.isAdmin) {
+  return res.status(403).json({ message: "Admin privileges required" });
+}
+
+const adminSecret = req.headers["x-admin-secret"];
+const expectedSecret = process.env.ADMIN_SECRET;
+
+if (expectedSecret && adminSecret !== expectedSecret) {
+  console.warn(`Failed admin secret check for user ${userId}`);
+  return res.status(403).json({ message: "Invalid admin credentials" });
+}
+
+next();
+} catch (error) {
+  console.error("Admin middleware error:", error);
+  return res.status(500).json({ message: "Admin authorization failed" });
+}
+};
+
+
+// --- PROCESS VIDEOS RESPONSE FIXED ---
+const sendProcessVideosResponse = (
+  res: Response,
+  processedCount: number,
+  totalEarningsFcfa: number,
+  totalEarningsUsd: number,
+  failures: any[],
+  hasMore: boolean,
+  nextCursor: any,
+  batchSize: number,
+  duration: number
+) => {
+  try {
+    return res.json({
+      success: true,
+      processedVideos: processedCount,
+      totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
+      totalEarningsUsd: totalEarningsUsd.toFixed(2),
+      failures: failures.length,
+      failureDetails: failures,
+      hasMore,
+      nextCursor,
+      batchSize,
+      durationMS: duration,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "email_failed" });
+  }
+};
+
+
+// --- ADMIN DELETE USER ---
+app.delete(
+  "/api/admin/delete-user",
+  requiresAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      const adminSecret = req.headers["x-admin-delete-secret"];
+      const expectedSecret = process.env.ADMIN_DELETE_SECRET;
+
+      if (!expectedSecret) {
+        console.error("[SECURITY] ADMIN_DELETE_SECRET not configured - endpoint disabled");
+        return res.status(503).json({ message: "Admin delete endpoint not configured" });
       }
 
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-
-      if (!user?.isAdmin) {
-        return res.status(403).json({ message: "Admin privileges required" });
-      }
-
-      const adminSecret = req.headers["x-admin-secret"];
-      const expectedSecret = process.env.ADMIN_SECRET;
-
-      if (expectedSecret && adminSecret !== expectedSecret) {
-        console.warn(`Failed admin secret check for user ${userId}`);
+      if (!adminSecret || adminSecret !== expectedSecret) {
+        console.warn("[SECURITY] Invalid admin delete secret attempted");
         return res.status(403).json({ message: "Invalid admin credentials" });
       }
 
-      next();
-    } catch (error) {
-      console.error("Admin middleware error:", error);
-      return res.status(500).json({ message: "Admin authorization failed" });
-    }
-  };
-
-
-  // --- PROCESS VIDEOS RESPONSE FIXED ---
-  const sendProcessVideosResponse = (
-    res: Response,
-    processedCount: number,
-    totalEarningsFcfa: number,
-    totalEarningsUsd: number,
-    failures: any[],
-    hasMore: boolean,
-    nextCursor: any,
-    batchSize: number,
-    duration: number
-  ) => {
-    try {
-      return res.json({
-        success: true,
-        processedVideos: processedCount,
-        totalEarningsFcfa: totalEarningsFcfa.toFixed(2),
-        totalEarningsUsd: totalEarningsUsd.toFixed(2),
-        failures: failures.length,
-        failureDetails: failures,
-        hasMore,
-        nextCursor,
-        batchSize,
-        durationMS: duration,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ error: "email_failed" });
-    }
-  };
-
-
-  // --- ADMIN DELETE USER ---
-  app.delete(
-    "/api/admin/delete-user",
-    requiresAdmin,
-    async (req: Request, res: Response) => {
-      try {
-        const { email } = req.body;
-        const adminSecret = req.headers["x-admin-delete-secret"];
-        const expectedSecret = process.env.ADMIN_DELETE_SECRET;
-
-        if (!expectedSecret) {
-          console.error("[SECURITY] ADMIN_DELETE_SECRET not configured - endpoint disabled");
-          return res.status(503).json({ message: "Admin delete endpoint not configured" });
-        }
-
-        if (!adminSecret || adminSecret !== expectedSecret) {
-          console.warn("[SECURITY] Invalid admin delete secret attempted");
-          return res.status(403).json({ message: "Invalid admin credentials" });
-        }
-
-        if (!email || typeof email !== "string") {
-          return res.status(400).json({ message: "Valid email is required" });
-        }
-
-        const user = await storage.findUserByEmail(email);
-
-        if (!user) {
-          return res.status(404).json({ message: "User not found with this email" });
-        }
-
-        console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
-
-        await db.delete(users).where(eq(users.email, email.toLowerCase()));
-
-        console.log(`[ADMIN] Successfully deleted user: ${email}`);
-
-        return res.json({
-          message: "User deleted successfully",
-          deletedEmail: email,
-          deletedUserId: user.id,
-        });
-
-      } catch (error) {
-        console.error("[ADMIN] Error deleting user:", error);
-        return res.status(500).json({ message: "Failed to delete user" });
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "Valid email is required" });
       }
+
+      const user = await storage.findUserByEmail(email);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found with this email" });
+      }
+
+      console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
+
+      await db.delete(users).where(eq(users.email, email.toLowerCase()));
+
+      console.log(`[ADMIN] Successfully deleted user: ${email}`);
+
+      return res.json({
+        message: "User deleted successfully",
+        deletedEmail: email,
+        deletedUserId: user.id,
+      });
+
+    } catch (error) {
+      console.error("[ADMIN] Error deleting user:", error);
+      return res.status(500).json({ message: "Failed to delete user" });
     }
-  ); // ← ← IL MANQUAIT CETTE FERMETURE});      
+  }
+); // ← Fermeture correcte du app.delete});     
