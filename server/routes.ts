@@ -1839,23 +1839,17 @@ app.post(
       await storage.createNotification({
         userId: referrerId,
         type: "referral",
-        message: `Félicitations ! Vous avez gagné ${bonusAmount} YimiCoins grâce à votre parrainage !`,
-      });
-
+        message: `Félicitations ! Vous avez gagné ${bonusAmount} YimiCoins grâce à votre parrainage });
       res.json({ success: true, referral });
     } catch (error) {
       console.error("Error applying referral code:", error);
       res.status(500).json({ message: "Failed to apply referral code" });
-    }
-  });
-
   // ===== BADGE ROUTES =====
-
   // Get all badge types
   app.get("/api/badges/types", async (req, res) => {
     try {
       const badgeTypes = await storage.getAllBadgeTypes();
-      res.json(badgeTypes);
+      res.json(badgeTypes});
     } catch (error) {
       console.error("Error fetching badge types:", error);
       res.status(500).json({ message: "Failed to fetch badge types" });
@@ -1955,23 +1949,17 @@ app.post(
 
       res.json({ url: session.url });
     } catch (error) {
-      console.error("Error creating subscription checkout:", error);
+      console.error("Error creating subscription checkout:", error});
       res.status(500).json({ message: "Failed to create checkout session" });
-    }
-  });
-
-  // Cancel subscription
+  // Cancel subscription});
   app.post("/api/subscriptions/cancel", requiresAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.claims.sub});
       await storage.cancelSubscription(userId);
       res.json({ success: true });
     } catch (error) {
-      console.error("Error cancelling subscription:", error);
+      console.error("Error cancelling subscription:", error});
       res.status(500).json({ message: "Failed to cancel subscription" });
-    }
-  });
-
   // ===== VERIFIED BADGE ROUTES =====
 
   // Get badge purchase status
