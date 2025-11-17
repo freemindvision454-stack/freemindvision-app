@@ -2149,7 +2149,6 @@ app.delete(
         console.error("[SECURITY] ADMIN_DELETE_SECRET not configured - endpoint disabled");
         return res.status(503).json({ message: "Admin delete endpoint not configured" });
       }
-
       if (!adminSecret || adminSecret !== expectedSecret) {
         console.warn("[SECURITY] Invalid admin delete secret attempted");
         return res.status(403).json({ message: "Invalid admin credentials" });
