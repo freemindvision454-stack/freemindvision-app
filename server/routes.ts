@@ -1002,9 +1002,8 @@ const gift = await storage.sendGift({
 
 res.json(gift);
 if (userId && planId && session.mode === "subscription") {
-          // Subscription checkout completed - subscription will be created separately
-          console.log(`✅ Checkout completed for user ${userId}, plan ${planId}`);
-        }
+// Subscription checkout completed - subscription will be created separately
+          console.log(`✅ Checkout completed for user ${userId}, plan ${planId});        
       } 
       else if (event.type === "customer.subscription.created") {
         if (!stripe) {
@@ -1126,12 +1125,10 @@ app.post("/api/buy-package", async (req, res) => {
     if (!pkg) {
       return res.status(404).json({ message: "Package not found" });
     }
-
-    const user = await storage.getUser(userId);
+    const user = await storage.getUser(userId});
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
     // Create or retrieve Stripe customer
     let customerId = user.stripeCustomerId;
     if (!customerId) {
@@ -1469,10 +1466,7 @@ app.post(
       });
     } catch (error) {
       console.error("Error initiating mobile money payment:", error);
-      res.status(500).json({ message: "Failed to initiate payment" });
-    }
-  });
-
+      res.status(500).json({ message: "Failed to initiate payment" });  
   // Purchase credits (fallback for testing/development)
   app.post("/api/credits/purchase", requiresAuth, async (req: any, res) => {
     try {
