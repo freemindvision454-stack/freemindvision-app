@@ -1,3 +1,4 @@
+
 import adminRoutes from "./admin.js";
 import type { Express, Request, Response } from "express";
 import express from "express";
@@ -987,7 +988,6 @@ const sender = await storage.getUser(senderId);
 if (!sender || sender.creditBalance < totalCost) {
   return res.status(400).json({ message: "Insufficient credits" });
 }
-
 // Deduct credits from sender
 await storage.updateUserCredits(senderId, -totalCost);
 
@@ -1006,9 +1006,13 @@ res.json(gift);
   console.error("Error sending gift:", error);
   res.status(500).json({ message: "Failed to send gift" });
 }
-});   // ← FERME LA ROUTE CORRECTEMENT
+}); // ← ROUTE SEND-GIFT FERMÉE CORRECTEMENT
 
+
+// =========================
 // ===== CREDIT ROUTES =====
+// =========================
+
 
 // Get credit packages
 app.get("/api/credit-packages", async (req, res) => {
@@ -1021,46 +1025,68 @@ app.get("/api/credit-packages", async (req, res) => {
   }
 });
 
-      const packages = await storage.getCreditPackages();
-      const pkg = packages.find((p) => p.id === packageId);
 
-      if (!pkg) {
-        return res.status(404).json({ message: "Package not found" });
-      }
+// START BUY PACKAGE ROUTE (MISSING IN YOUR CODE)
+app.post("/api/buy-package", async (req, res) => {
+  try {
+    const { userId, packageId } = req.body;
 
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+    const packages = await storage.getCreditPackages();
+    const pkg = packages.find((p) => p.id === packageId);
 
-      // Create or retrieve Stripe customer
-      let customerId = user.stripeCustomerId;
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: user.email || undefined,
-          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
-          metadata: { userId },
-        });
-        customerId = customer.id;
-        await storage.updateUser(userId, { stripeCustomerId: customerId });
-      }
+    if (!pkg) {
+      return res.status(404).json({ message: "Package not found" });
+    }
 
-      // Create payment intent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(parseFloat(pkg.priceUsd) * 100), // Convert to cents (priceUsd is string from DB)
-        currency: "usd",
-        customer: customerId,
-        metadata: {
-          userId,
-          packageId: pkg.id,
-          credits: pkg.credits + pkg.bonus,
-          packageName: pkg.name,
-        },
-        // Stripe webhook handler
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Create or retrieve Stripe customer
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || undefined,
+        metadata: { userId },
+      });
+
+      customerId = customer.id;
+      await storage.updateUser(userId, { stripeCustomerId: customerId });
+    }
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(parseFloat(pkg.priceUsd) * 100),
+      currency: "usd",
+      customer: customerId,
+      metadata: {
+        userId,
+        packageId: pkg.id,
+        credits: pkg.credits + pkg.bonus,
+        packageName: pkg.name,
+      },
+    });
+
+    return res.json({ clientSecret: paymentIntent.client_secret });
+
+  } catch (error) {
+    console.error("Error creating payment intent:", error);
+    res.status(500).json({ message: "Failed to create payment intent" });
+  }
+}); // END BUY PACKAGE ROUTE
+
+
+// ===========================
+// ==== STRIPE WEBHOOK =======
+// ===========================
+
 app.post(
   "/api/webhooks/stripe",
   express.raw({ type: "application/json" }),
   async (req: any, res) => {
+
     if (!stripe) {
       return res.status(503).json({ message: "Stripe not configured" });
     }
@@ -1070,45 +1096,32 @@ app.post(
 
     try {
       if (process.env.STRIPE_WEBHOOK_SECRET) {
-        event = stripe.webhooks.constructEvent(
-          req.body,
-          sig,
-          process.env.STRIPE_WEBHOOK_SECRET
-        );
-      } else {
-        return res
-          .status(503)
-          .json({ message: "Stripe webhook secret not configured" });
-      }
-
-      // À partir d'ici tu peux gérer les events Stripe
-      // Exemple :
-      // if (event.type === "payment_intent.succeeded") { ... }
-
-      res.json({ received: true });
-    } catch (error: any) {
-      console.error("Stripe webhook error:", error);
-      res
-        .status(400)
-        .json({ message: "Webhook signature verification failed" });
-    }
-  }
-);
-        // Production: Verify webhook signature
+        // Production: verify signature
         event = stripe.webhooks.constructEvent(
           req.body,
           sig as string,
           process.env.STRIPE_WEBHOOK_SECRET
         );
       } else {
-        // Development: Parse without verification (NOT for production)
+        // Development: bypass signature verification
         const payload = req.body.toString();
         event = JSON.parse(payload);
-        console.warn("⚠️  Webhook signature verification skipped (development mode)");
+        console.warn("⚠️ Webhook signature verification skipped (dev mode)");
       }
+
+      // TODO: handle Stripe events here
+      // Example:
+      // if (event.type === "payment_intent.succeeded") { /* ... */ }
+
+      return res.json({ received: true });
+
     } catch (err: any) {
-      console.error("Webhook error:", err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
+      console.error("Stripe webhook error:", err.message);
+      return res.status(400).json({ message: "Webhook signature verification failed" });
+    }
+  }
+);
+ return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
     // Handle the event
@@ -1973,7 +1986,6 @@ const sendProcessVideosResponse = (
     return res.status(500).json({ error: "email_failed" });
   }
 };
-
 // --- ADMIN DELETE USER ---
 app.delete(
   "/api/admin/delete-user",
@@ -1993,29 +2005,30 @@ app.delete(
         console.warn("[SECURITY] Invalid admin delete secret attempted");
         return res.status(403).json({ message: "Invalid admin credentials" });
       }
-if (!email || typeof email !== "string") {
-  return res.status(400).json({ message: "Valid email is required" });
-}
 
-const user = await storage.findUserByEmail(email);
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "Valid email is required" });
+      }
 
-if (!user) {
-  return res.status(404).json({ message: "User not found with this email" });
-}
+      const user = await storage.findUserByEmail(email);
 
-console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
+      if (!user) {
+        return res.status(404).json({ message: "User not found with this email" });
+      }
 
-await db.delete(users).where(eq(users.email, email.toLowerCase()));
+      console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
 
-console.log(`[ADMIN] Successfully deleted user: ${email}`);
+      await db.delete(users).where(eq(users.email, email.toLowerCase()));
 
-return res.json({
-  message: "User deleted successfully",
-  deletedEmail: email,
-  deletedUserId: user.id,
-});
-} catch (error) {
-  console.error("[ADMIN] Error deleting user:", error);
-  return res.status(500).json({ message: "Failed to delete user" });
-}
-);
+      console.log(`[ADMIN] Successfully deleted user: ${email}`);
+
+      return res.json({
+        message: "User deleted successfully",
+        deletedEmail: email,
+        deletedUserId: user.id,
+      });
+
+    } catch (error) {
+      console.error("[ADMIN] Error deleting user:", error);
+      return res.status(500).json({ message: "Failed to delete user" });
+    });
