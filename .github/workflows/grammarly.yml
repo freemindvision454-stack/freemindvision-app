@@ -1,4 +1,4 @@
-name: Grammarly English Check
+name: Grammarly Auto Fix
 
 on:
   push:
@@ -18,12 +18,12 @@ jobs:
           curl -L https://raw.githubusercontent.com/grammarly/grammarly-cli/main/install.sh | bash
           echo "$HOME/.grammarly/bin" >> $GITHUB_PATH
 
-      - name: Run Grammarly check
+      - name: Run Grammarly Auto-Fix
         run: |
-          grammarly --verbose .
+          grammarly --fix --verbose .
 
-      - name: Upload Grammarly Report
-        uses: actions/upload-artifact@v3
+      - name: Commit Grammarly Fixes
+        uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          name: grammarly-report
-          path: grammarly-report.json
+          commit_message: "Grammarly auto-fix applied"
+          branch: main
