@@ -1007,7 +1007,211 @@ res.json(gift);
   res.status(500).json({ message: "Failed to send gift" });
 }
 }); // ← ROUTE SEND-GIFT FERMÉE CORRECTEMENT
+// --- SEND GIFT ROUTE (fin de la route send-gift) ---
+// (Ce bloc assume que la route avait été ouverte plus haut et que nous sommes
+//  dans la partie finale qui déduit le crédit et envoie le cadeau.)
 
+// Deduct credits from sender
+await storage.updateUserCredits(senderId, -totalCost);
+
+// Send the gift (this also updates recipient earnings)
+const gift = await storage.sendGift({
+  giftTypeId,
+  senderId,
+  recipientId,
+  videoId: videoId || null,
+  quantity,
+});
+
+res.json(gift);
+
+} catch (error) {
+  console.error("Error sending gift:", error);
+  res.status(500).json({ message: "Failed to send gift" });
+}
+}); // ← FERME LA ROUTE SEND-GIFT CORRECTEMENT
+
+
+// ===== CREDIT ROUTES =====
+
+// Get credit packages
+app.get("/api/credit-packages", async (req, res) => {
+  try {
+    const packages = await storage.getCreditPackages();
+    res.json(packages);
+  } catch (error) {
+    console.error("Error fetching credit packages:", error);
+    res.status(500).json({ message: "Failed to fetch credit packages" });
+  }
+});
+
+
+// ----- BUY PACKAGE ROUTE -----
+// (Je remets ici la logique que tu avais : récupérer package, user, créer customer si besoin,
+//  et créer un paymentIntent ; si tu as déjà un endpoint similaire, adapte le chemin / nom.)
+
+app.post("/api/buy-package", async (req, res) => {
+  try {
+    const { userId, packageId } = req.body;
+
+    const packages = await storage.getCreditPackages();
+    const pkg = packages.find((p) => p.id === packageId);
+
+    if (!pkg) {
+      return res.status(404).json({ message: "Package not found" });
+    }
+
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Create or retrieve Stripe customer
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email || undefined,
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || undefined,
+        metadata: { userId },
+      });
+      customerId = customer.id;
+      await storage.updateUser(userId, { stripeCustomerId: customerId });
+    }
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(parseFloat(pkg.priceUsd) * 100), // cents
+      currency: "usd",
+      customer: customerId,
+      metadata: {
+        userId,
+        packageId: pkg.id,
+        credits: pkg.credits + (pkg.bonus || 0),
+        packageName: pkg.name,
+      },
+    });
+
+    return res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error("Error creating payment intent:", error);
+    return res.status(500).json({ message: "Failed to create payment intent" });
+  }
+});
+
+
+// ===========================
+// ==== STRIPE WEBHOOK =======
+// ===========================
+
+app.post(
+  "/api/webhooks/stripe",
+  express.raw({ type: "application/json" }),
+  async (req: any, res) => {
+    if (!stripe) {
+      return res.status(503).json({ message: "Stripe not configured" });
+    }
+
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+      // Verify signature if webhook secret set (production)
+      if (process.env.STRIPE_WEBHOOK_SECRET) {
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig as string,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+      } else {
+        // Development: parse without verification (NOT for production)
+        const payload = req.body.toString();
+        event = JSON.parse(payload);
+        console.warn("⚠️  Webhook signature verification skipped (development mode)");
+      }
+
+      // Handle events
+      if (event.type === "payment_intent.succeeded") {
+        const paymentIntent = event.data.object as any;
+        // Mark transaction completed in your storage
+        try {
+          await storage.updateTransactionStatus(paymentIntent.id, "completed");
+          console.log(`✅ Payment succeeded: ${paymentIntent.id}`);
+        } catch (err) {
+          console.error("Error updating transaction status:", err);
+        }
+      } else if (event.type === "payment_intent.payment_failed") {
+        const paymentIntent = event.data.object as any;
+        try {
+          await storage.updateTransactionStatus(paymentIntent.id, "failed");
+          console.log(`❌ Payment failed: ${paymentIntent.id}`);
+        } catch (err) {
+          console.error("Error updating transaction status:", err);
+        }
+      } else if (event.type === "checkout.session.completed") {
+        const session = event.data.object as any;
+        const { userId, planId } = session.metadata || {};
+
+        if (userId && planId && session.mode === "subscription") {
+          // Subscription checkout completed - subscription will be created separately
+          console.log(`✅ Checkout completed for user ${userId}, plan ${planId}`);
+        }
+      } else if (event.type === "customer.subscription.created") {
+        if (!stripe) {
+          console.error("❌ Stripe not configured - cannot process subscription webhook");
+          return res.status(503).json({ message: "Stripe not configured" });
+        }
+
+        const subscription = event.data.object as any;
+        
+        try {
+          // Retrieve checkout session related to subscription if possible
+          const checkoutSession = await stripe.checkout.sessions.list({
+            subscription: subscription.id,
+            limit: 1,
+          });
+
+          if (checkoutSession.data.length > 0) {
+            const { userId, planId } = checkoutSession.data[0].metadata || {};
+            
+            if (userId && planId) {
+              await storage.createUserSubscription({
+                userId,
+                planId,
+                stripeSubscriptionId: subscription.id,
+                currentPeriodStart: new Date(subscription.current_period_start * 1000),
+                currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              });
+
+              console.log(`✅ Subscription created for user ${userId}`);
+            }
+          }
+        } catch (sessionErr: any) {
+          console.error("Error retrieving checkout session:", sessionErr);
+          // Do not fail webhook: subscription might still be valid
+        }
+      } else if (event.type === "customer.subscription.updated") {
+        const subscription = event.data.object as any;
+        
+        try {
+          await storage.updateSubscriptionStatus(
+            subscription.id,
+            subscription.status,
+            new Date(subscription.current_period_end * 1000)
+          );
+          console.log(`🔄 Subscription updated: ${subscription.id}`);
+        } catch (err: any) {
+          console.error("Error updating subscription status:", err);
+        }
+      }
+
+      // Respond success to Stripe
+      return res.json({ received: true });
+    } catch (err: any) {
+      console.error("Stripe webhook error:", err.message || err);
+      return res.status(400).json({ message: "Webhook signature verification failed" });
+    }
+  }
+);
 
 // =========================
 // ===== CREDIT ROUTES =====
@@ -1142,62 +1346,7 @@ app.post(
           console.log(`✅ Payment succeeded for user ${userId}: ${credits} YimiCoins`);
         } else {
           // Handle any other payment types (gifts, etc.)
-          await storage.updateTransactionStatus(paymentIntent.id, "completed");
-          console.log(`✅ Payment succeeded: ${paymentIntent.id}`);
-        }
-      } else if (event.type === "payment_intent.payment_failed") {
-        const paymentIntent = event.data.object;
-        await storage.updateTransactionStatus(paymentIntent.id, "failed");
-        console.log(`❌ Payment failed: ${paymentIntent.id}`);
-      } else if (event.type === "checkout.session.completed") {
-        const session = event.data.object;
-        const { userId, planId } = session.metadata || {};
 
-        if (userId && planId && session.mode === "subscription") {
-          // Subscription checkout completed - subscription will be created separately
-          console.log(`✅ Checkout completed for user ${userId}, plan ${planId}`);
-        }
-      } else if (event.type === "customer.subscription.created") {
-        if (!stripe) {
-          console.error("❌ Stripe not configured - cannot process subscription webhook");
-          return res.status(503).json({ message: "Stripe not configured" });
-        }
-
-        const subscription = event.data.object;
-        
-        try {
-          // Extract userId and planId from subscription metadata or customer metadata
-          const checkoutSession = await stripe.checkout.sessions.list({
-            subscription: subscription.id,
-            limit: 1,
-          });
-
-          if (checkoutSession.data.length > 0) {
-            const { userId, planId } = checkoutSession.data[0].metadata || {};
-            
-            if (userId && planId) {
-              await storage.createUserSubscription({
-                userId,
-                planId,
-                stripeSubscriptionId: subscription.id,
-                currentPeriodStart: new Date(subscription.current_period_start * 1000),
-                currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-              });
-
-              console.log(`✅ Subscription created for user ${userId}`);
-            }
-          }
-        } catch (sessionErr: any) {
-          console.error("Error retrieving checkout session:", sessionErr);
-          // Don't fail webhook - subscription is still valid
-        }
-      } else if (event.type === "customer.subscription.updated") {
-        const subscription = event.data.object;
-        
-        await storage.updateSubscriptionStatus(
-          subscription.id,
-          subscription.status,
-          new Date(subscription.current_period_end * 1000)
         );
 
         console.log(`✅ Subscription ${subscription.id} updated to status: ${subscription.status}`);
@@ -2021,7 +2170,7 @@ app.delete(
       await db.delete(users).where(eq(users.email, email.toLowerCase()));
 
       console.log(`[ADMIN] Successfully deleted user: ${email}`);
-
+ju
       return res.json({
         message: "User deleted successfully",
         deletedEmail: email,
