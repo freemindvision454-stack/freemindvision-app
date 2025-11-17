@@ -1,1 +1,29 @@
+name: Grammarly English Check
 
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  grammarly:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Grammarly CLI
+        run: |
+          curl -L https://raw.githubusercontent.com/grammarly/grammarly-cli/main/install.sh | bash
+          echo "$HOME/.grammarly/bin" >> $GITHUB_PATH
+
+      - name: Run Grammarly check
+        run: |
+          grammarly --verbose .
+
+      - name: Upload Grammarly Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: grammarly-report
+          path: grammarly-report.json
