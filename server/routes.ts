@@ -1002,8 +1002,7 @@ const totalCost = giftType.creditCost * quantity;
           });
 
           if (checkoutSession.data.length > 0) {
-            const { userId, planId } = checkoutSession.data[0].metadata || {};
-
+            const { userId, planId } = checkoutSession.data[0].metadata || });
             if (userId && planId) {
               await storage.createUserSubscription({
                 userId,
@@ -1125,7 +1124,7 @@ app.post("/api/buy-package", async (req, res) => {
       currency: "usd",
       customer: customerId,
       metadata: {
-        userId,
+        userId});
         packageId: pkg.id,
         credits: pkg.credits + (pkg.bonus || 0),
         packageName: pkg.name,
@@ -1139,11 +1138,9 @@ app.post("/api/buy-package", async (req, res) => {
   }
 });
 
-
 // ===========================
 // ==== STRIPE WEBHOOK =======
 // ===========================
-
 app.post(
   "/api/webhooks/stripe",
   express.raw({ type: "application/json" }),
@@ -1434,8 +1431,8 @@ app.post(
         const totalCredits = pkg.credits + pkg.bonus;
         await storage.updateUserCredits(userId, totalCredits);
         await storage.updateTransactionStatus(transaction.paymentProvider!, "completed");
-        console.log(`✅ Mobile Money payment completed for user ${userId}`);
-      }, 3000);
+        console.log(`✅ Mobile Money payment completed for user ${userId});
+      }, 3000});
 
       res.json({ 
         success: true, 
@@ -1443,7 +1440,7 @@ app.post(
         message: "Payment initiated. Please check your phone to confirm.",
       });
     } catch (error) {
-      console.error("Error initiating mobile money payment:", error);
+      console.error("Error initiating mobile money payment:", error});
       res.status(500).json({ message: "Failed to initiate payment" });  
   // Purchase credits (fallback for testing/development)
   app.post("/api/credits/purchase", requiresAuth, async (req: any, res) => {
