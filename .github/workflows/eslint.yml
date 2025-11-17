@@ -1,20 +1,19 @@
-
 name: ESLint Auto Fix
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Install Node
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
@@ -23,9 +22,9 @@ jobs:
         run: npm install
 
       - name: Run ESLint with auto-fix
-        run: npm run lint
+        run: npx eslint . --ext .ts --fix
 
-      - name: Commit fixes
+      - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "ESLint auto-fix"
+          commit_message: "ESLint Auto Fix"
