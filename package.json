@@ -10,7 +10,7 @@
     "dev": "tsx server/index.ts",
 
     "build:server": "tsc -p server/tsconfig.json",
-    "build:client": "vite build",
+    "build:client": "vite build --outDir server/dist/public",
     "build": "npm run build:server && npm run build:client",
 
     "prestart": "npm run build",
@@ -22,7 +22,6 @@
 
   "files": [
     "server/dist",
-    "dist",
     "package.json"
   ],
 
