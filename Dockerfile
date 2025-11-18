@@ -7,20 +7,18 @@ FROM node:20-slim AS base
 WORKDIR /app
 
 ############################
-# Dependencies stage
+# Install dependencies
 ############################
 FROM base AS deps
 
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
         build-essential \
-        python3 \
-        pkg-config && \
+        python3 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 
-# installer proprement : npm ci
 RUN npm ci
 
 ############################
@@ -30,7 +28,6 @@ FROM deps AS build
 
 COPY . .
 
-# Build Vite (frontend) + build serveur
 RUN npm run build
 
 ############################
@@ -41,20 +38,19 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copie node_modules de deps
+# Copy node_modules from deps
 COPY --from=deps /app/node_modules ./node_modules
 
-# Build frontend → server/public
+# Copy built frontend to server/public
 COPY --from=build /app/dist ./server/public
 
-# Build backend → server/dist
+# Copy built backend
 COPY --from=build /app/server/dist ./server/dist
 
 COPY package*.json ./
 
-# DigitalOcean utilisera PORT automatiquement
-ENV PORT=8080
+# Google Cloud Run sets the port automatically
+ENV PORT=$PORT
 EXPOSE 8080
 
-# Lancer le serveur backend
 CMD ["node", "server/dist/index.js"]
