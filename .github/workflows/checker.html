@@ -1,1 +1,98 @@
 
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bracket & Parentheses Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f7f7f7;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    textarea {
+      width: 100%;
+      height: 250px;
+      font-family: monospace;
+      padding: 10px;
+      font-size: 15px;
+      border: 2px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #007bff;
+      color: #fff;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      background: #fff;
+      border: 2px solid #ccc;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>Bracket & Parentheses Checker</h1>
+  <p>Paste your code below. This tool will detect unbalanced parentheses (), brackets [], and braces {}.</p>  <textarea id="code"></textarea><button onclick="checkBrackets()">Check</button>
+
+  <div id="result"></div>  <script>
+    function checkBrackets() {
+      const text = document.getElementById('code').value;
+      const stack = [];
+      const opening = '({[';
+      const closing = ')}]';
+      const pairs = {
+        ')': '(',
+        '}': '{',
+        ']': '[',
+      };
+
+      let errors = [];
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+
+        if (opening.includes(char)) {
+          stack.push({ char, index: i });
+        }
+        else if (closing.includes(char)) {
+          if (stack.length === 0) {
+            errors.push(`Unexpected '${char}' at position ${i}`);
+          } else {
+            const last = stack.pop();
+            if (last.char !== pairs[char]) {
+              errors.push(`Mismatched '${last.char}' at position ${last.index} with '${char}' at position ${i}`);
+            }
+          }
+        }
+      }
+
+      while (stack.length > 0) {
+        const unclosed = stack.pop();
+        errors.push(`Missing closing bracket for '${unclosed.char}' at position ${unclosed.index}`);
+      }
+
+      const resultBox = document.getElementById('result');
+
+      if (errors.length === 0) {
+        resultBox.textContent = 'No errors found. All brackets are correctly balanced!';
+      } else {
+        resultBox.textContent = errors.join('\n');
+      }
+    }
+  </script></body>
+</html>
