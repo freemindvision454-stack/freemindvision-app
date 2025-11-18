@@ -1431,14 +1431,13 @@ app.post(
         const totalCredits = pkg.credits + pkg.bonus;
         await storage.updateUserCredits(userId, totalCredits);
         await storage.updateTransactionStatus(transaction.paymentProvider!, "completed");
-        console.log(`✅ Mobile Money payment completed for user ${userId});
-      }, 3000});
+        console.log(`✅ Mobile Money payment completed for user ${userId}
+      }, 3000}
 
       res.json({ 
         success: true, 
         transactionId: transaction.id,
-        message: "Payment initiated. Please check your phone to confirm.",
-      });
+        message: "Payment initiated. Please check your phone to confirm.",   
     } catch (error) {
       console.error("Error initiating mobile money payment:", error});
       res.status(500).json({ message: "Failed to initiate payment" });  
@@ -1817,7 +1816,7 @@ await storage.createNotification({
 res.json({ success: true, referral });
 
 } catch (error) {
-  console.error("Error applying referral code:", error);
+  console.error("Error applying referral code:", error});
   res.status(500).json({ message: "Failed to apply referral code" });
 // ===== BADGE ROUTES =====
 
@@ -1925,10 +1924,9 @@ const session = await stripe.checkout.sessions.create({
 
 res.json({ url: session.url });
 } catch (error) {
-  console.error("Error creating subscription checkout:", error);
+  console.error("Error creating subscription checkout:", error});
   res.status(500).json({ message: "Failed to create checkout session" });
 }
-
 // Cancel subscription
 app.post("/api/subscriptions/cancel", requiresAuth, async (req: any, res) => {
   try {
@@ -2023,10 +2021,6 @@ next();
 } catch (error) {
   console.error("Admin middleware error:", error);
   return res.status(500).json({ message: "Admin authorization failed" });
-}
-};
-
-
 // --- PROCESS VIDEOS RESPONSE FIXED ---
 const sendProcessVideosResponse = (
   res: Response,
