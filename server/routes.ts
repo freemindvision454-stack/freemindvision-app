@@ -984,8 +984,7 @@ export async function registerRoutes(app: Express): Promise<Express> {
 const totalCost = giftType.creditCost * quantity;
 
 // Check sender balanceb will be created separately
-          console.log});(`✅ Checkout completed for user ${userId}, plan ${planId});        
-      } 
+     console.log(`✅ Checkout completed for user ${userId}, plan ${planId}`); 
       else if (event.type === "customer.subscription.created") {
         if (!stripe) {
           console.error("❌ Stripe not configured - cannot process subscription webhook");
@@ -1011,10 +1010,7 @@ const totalCost = giftType.creditCost * quantity;
                 currentPeriodStart: new Date(subscription.current_period_start * 1000),
                 currentPeriodEnd: new Date(subscription.current_period_end * 1000),
               });
-
               console.log(`✅ Subscription created for user ${userId}`);
-            }
-          }
         } catch (sessionErr: any) {
           console.error("Error retrieving checkout session:", sessionErr);
           // Do not fail webhook: subscription might still be valid
