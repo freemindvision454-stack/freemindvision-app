@@ -994,22 +994,22 @@ const totalCost = giftType.creditCost * quantity;
         const subscription = event.data.object as any;
 
         try {
-          // Retrieve checkout session related to subscription if possible
-          const checkoutSession = await stripe.checkout.sessions.list({
-            subscription: subscription.id,
-            limit: 1,
-          });
+// Retrieve checkout session related to subscription if possible
+const checkoutSession = await stripe.checkout.sessions.list({
+  subscription: subscription.id,
+  limit: 1,
+});
 
-          if (checkoutSession.data.length > 0) {
-            const { userId, planId } = checkoutSession.data[0].metadata || });
-            if (userId && planId) {
-              await storage.createUserSubscription({
-                userId,
-                planId,
-                stripeSubscriptionId: subscription.id,
-                currentPeriodStart: new Date(subscription.current_period_start * 1000),
-                currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-              });
+if (checkoutSession.data.length > 0) {
+  const { userId, planId } = checkoutSession.data[0].metadata || {};
+  if (userId && planId) {
+    await storage.createUserSubscription({
+      userId,
+      planId,
+      stripeSubscriptionId: subscription.id,
+      currentPeriodStart: new Date(subscription.current_period_start * 1000),
+      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    });          
               console.log(`✅ Subscription created for user ${userId}`);
         } catch (sessionErr: any) {
           console.error("Error retrieving checkout session:", sessionErr);
@@ -2009,10 +2009,8 @@ const adminSecret = req.headers["x-admin-secret"];
 const expectedSecret = process.env.ADMIN_SECRET;
 
 if (expectedSecret && adminSecret !== expectedSecret) {
-  console.warn(`Failed admin secret check for user ${userId}`);
+  console.warn(`Failed admin secret check for user ${userId});
   return res.status(403).json({ message: "Invalid admin credentials" });
-}
-
 next();
 } catch (error) {
   console.error("Admin middleware error:", error);
@@ -2080,12 +2078,10 @@ app.delete(
         return res.status(404).json({ message: "User not found with this email" });
       }
 
-      console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id})`);
-
+      console.log(`[ADMIN] Deleting user account: ${email} (ID: ${user.id});
       await db.delete(users).where(eq(users.email, email.toLowerCase()));
 
-      console.log(`[ADMIN] Successfully deleted user: ${email}`);
-
+      console.log(`[ADMIN] Successfully deleted user: ${email});
       return res.json({
         message: "User deleted successfully",
         deletedEmail: email,
@@ -2097,4 +2093,4 @@ app.delete(
       return res.status(500).json({ message: "Failed to delete user" });
     }
   }
-); // ← Fermeture correcte du app.delete});     
+); // ← Fermeture correcte du app.delete});  
