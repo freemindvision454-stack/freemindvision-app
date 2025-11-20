@@ -7,7 +7,7 @@ FROM node:20-slim AS base
 WORKDIR /app
 
 ############################
-# Install dependencies
+# Dependencies install
 ############################
 FROM base AS deps
 
@@ -39,16 +39,18 @@ ENV NODE_ENV=production
 # Copy node_modules
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy frontend → server/public
+# Copy frontend dist (vite / react / next build)
 COPY --from=build /app/dist ./server/public
 
-# Copy backend → server/dist
+# Copy backend build
 COPY --from=build /app/server/dist ./server/dist
 
+# Copy package.json for version/env access
 COPY package*.json ./
 
-# Google Cloud Run will ALWAYS use port 8080
-ENV PORT=8080
-EXPOSE 8080
+# PORT for Kubernetes / Alibaba Cloud
+ENV PORT=3000
+EXPOSE 3000
 
+# Start backend server
 CMD ["node", "server/dist/index.js"]
