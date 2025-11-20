@@ -19,7 +19,9 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
-RUN npm ci
+COPY server/package*.json ./server/
+
+RUN npm install
 
 ############################
 # Build stage
@@ -39,18 +41,17 @@ ENV NODE_ENV=production
 # Copy node_modules
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy frontend dist (vite / react / next build)
-COPY --from=build /app/dist ./server/public
-
-# Copy backend build
+# Copy backend compiled files
 COPY --from=build /app/server/dist ./server/dist
 
-# Copy package.json for version/env access
+# Copy frontend build (public static files)
+COPY --from=build /app/server/dist/public ./server/dist/public
+
+# Copy package files
 COPY package*.json ./
 
-# PORT for Kubernetes / Alibaba Cloud
+# Expose port for Kubernetes
 ENV PORT=3000
 EXPOSE 3000
 
-# Start backend server
 CMD ["node", "server/dist/index.js"]
