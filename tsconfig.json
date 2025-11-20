@@ -11,13 +11,22 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "noEmitOnError": false
+    "noEmitOnError": false,
+
+    "types": ["node"], 
+    "moduleDetection": "force"
   },
 
-  "include": ["./**/*.ts"],
+  "include": [
+    "./server/**/*.ts",
+    "./src/**/*.ts",
+    "./scripts/**/*.ts"
+  ],
+
   "exclude": [
     "node_modules",
     "dist",
+    "tests",
     "**/*.test.ts"
   ]
 }
