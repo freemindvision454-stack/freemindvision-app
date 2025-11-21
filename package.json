@@ -14,7 +14,8 @@
     "build": "npm run build:server && npm run build:client",
 
     "start": "node server/dist/index.js",
-    "prestart": "npm run build",
+
+    "postinstall": "npm run build",
 
     "check": "tsc",
     "db:push": "drizzle-kit push"
@@ -44,6 +45,11 @@
     "cloudinary": "^2.8.0",
     "stripe": "^19.2.1",
 
+    "@supabase/supabase-js": "^2.45.0",
+
+    "@tencentcloud/chat": "^1.0.0",
+    "@tencentcloud/trtc": "^1.0.0",
+
     "@neondatabase/serverless": "^0.10.4"
   },
 
@@ -69,8 +75,7 @@
   },
 
   "engines": {
-    "node": "20.x",
-    "npm": "10.x"
+    "node": ">=20.0.0"
   },
 
   "engineStrict": false
