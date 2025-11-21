@@ -1,18 +1,18 @@
 import express, { Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes";        // <-- tes routes API (auth, admin, live, etc.)
+import { registerRoutes } from "./routes";
 import { setupWebSocket } from "./websocket";
 import { runMigrations } from "./migrate";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Fix ES modules
+// Fix ES Modules (__dirname)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-/* RAW BODY */
+/* RAW BODY (Stripe / Webhooks) */
 declare module "http" {
   interface IncomingMessage {
     rawBody?: Buffer;
@@ -65,29 +65,26 @@ app.use((req, res, next) => {
     console.log(`[SERVER] Mode: ${isProd ? "PRODUCTION" : "DEV"}`);
     console.log(`[SERVER] Port: ${PORT}`);
 
-    /* RUN DATABASE MIGRATIONS */
+    /* DB MIGRATIONS */
     await runMigrations();
 
-    /* ROUTES (AUTH + ADMIN + LIVE TRTC) */
+    /* API ROUTES (AUTH, ADMIN, LIVE, TRTC, etc.) */
     await registerRoutes(app);
 
-    /* ERROR HANDLER */
-    app.use(
-      (err: any, _req: Request, res: Response, _next: NextFunction) => {
-        console.error("API Error:", err);
-        res.status(err.status || 500).json({
-          error: err.message || "Internal server error",
-        });
-      }
-    );
+    /* GLOBAL ERROR HANDLER */
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error("API Error:", err);
+      res.status(err.status || 500).json({
+        error: err.message || "Internal server error",
+      });
+    });
 
-    /* STATIC FILES (PRODUCTION) */
+    /* STATIC FILES FOR PRODUCTION */
     if (isProd) {
-      const publicPath = path.join(process.cwd(), "dist");
+      const publicPath = path.join(__dirname, "dist", "public");
 
-      console.log(`[SERVER] Serving static from: ${publicPath}`);
+      console.log(`[SERVER] Serving static files from: ${publicPath}`);
 
-      // Serve frontend
       app.use(express.static(publicPath));
 
       // SPA fallback
@@ -96,14 +93,14 @@ app.use((req, res, next) => {
       });
     }
 
-    /* START SERVER */
+    /* CREATE SERVER + WEBSOCKET */
     const server = createServer(app);
 
-    /* START WEBSOCKET */
     setupWebSocket(server);
 
+    /* START */
     server.listen(PORT, "0.0.0.0", () => {
-      console.log(`[SERVER] Running at http://0.0.0.0:${PORT}`);
+      console.log(`[SERVER] Running on http://0.0.0.0:${PORT}`);
     });
 
   } catch (error) {
