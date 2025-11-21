@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes";        // <-- tes routes API (auth, admin, live, etc.)
 import { setupWebSocket } from "./websocket";
 import { runMigrations } from "./migrate";
 import path from "path";
@@ -65,7 +65,10 @@ app.use((req, res, next) => {
     console.log(`[SERVER] Mode: ${isProd ? "PRODUCTION" : "DEV"}`);
     console.log(`[SERVER] Port: ${PORT}`);
 
-    /* ROUTES */
+    /* RUN DATABASE MIGRATIONS */
+    await runMigrations();
+
+    /* ROUTES (AUTH + ADMIN + LIVE TRTC) */
     await registerRoutes(app);
 
     /* ERROR HANDLER */
@@ -78,7 +81,7 @@ app.use((req, res, next) => {
       }
     );
 
-    /* STATIC FILES - FIX DIGITALOCEAN */
+    /* STATIC FILES (PRODUCTION) */
     if (isProd) {
       const publicPath = path.join(process.cwd(), "dist");
 
@@ -96,6 +99,7 @@ app.use((req, res, next) => {
     /* START SERVER */
     const server = createServer(app);
 
+    /* START WEBSOCKET */
     setupWebSocket(server);
 
     server.listen(PORT, "0.0.0.0", () => {
