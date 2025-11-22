@@ -966,38 +966,57 @@ export async function registerRoutes(app: Express): Promise<Express> {
       res.status(500).json({ message: "Failed to fetch gift types" });
     }
   });
+// Send a gift
+app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
+  try {
+    const senderId = req.user.claims.sub;
+    const { giftTypeId, recipientId, videoId, quantity } = req.body;
 
-  // Send a gift
-  app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
-    try {
-      const senderId = req.user.claims.sub;
-      const { giftTypeId, recipientId, videoId, quantity } = req.body;
+    // Validate inputs
+    if (!giftTypeId || !recipientId || !quantity) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
-      // Get gift type to calculate cost
-      const giftTypes = await storage.getGiftTypes();
-      const giftType = giftTypes.find((gt) => gt.id === giftTypeId);
+    // Get gift type to calculate cost
+    const giftTypes = await storage.getGiftTypes();
+    const giftType = giftTypes.find((gt) => gt.id === giftTypeId);
 
-      if (!giftType) {
-        return res.status(404).json({ message: "Gift type not found" });
-}
+    if (!giftType) {
+      return res.status(404).json({ message: "Gift type not found" });
+    }
 
-const totalCost = giftType.creditCost * quantity;
+    const totalCost = giftType.creditCost * quantity;
 
-// Check sender balanceb will be created separately
-     console.log(`✅ Checkout completed for user ${userId}, plan ${planId}`); 
-      else if (event.type === "customer.subscription.created") {
-        if (!stripe) {
-          console.error("❌ Stripe not configured - cannot process subscription webhook");
-          return res.status(503).json({ message: "Stripe not configured" });
-        }
+    // Get sender balance
+    const sender = await storage.getUserById(senderId);
+    if (!sender) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
 
-        const subscription = event.data.object as any;
+    if (sender.credits < totalCost) {
+      return res.status(400).json({ message: "Insufficient credits" });
+    }
 
-        try {
-// Retrieve checkout session related to subscription if possible
-const checkoutSession = await stripe.checkout.sessions.list({
-  subscription: subscription.id,
-  limit: 1,
+    // Deduct credits
+    await storage.updateUserCredits(senderId, sender.credits - totalCost);
+
+    // Save gift transaction
+    await storage.saveGift({
+      senderId,
+      recipientId,
+      giftTypeId,
+      quantity,
+      videoId: videoId || null,
+      cost: totalCost,
+      createdAt: new Date(),
+    });
+
+    return res.json({ message: "Gift sent successfully" });
+
+  } catch (err) {
+    console.error("❌ Error sending gift:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 });
 
 if (checkoutSession.data.length > 0) {
