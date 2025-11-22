@@ -1,4 +1,4 @@
-se
+
 import adminRoutes from "./admin.js";
 import type { Express, Request, Response } from "express";
 import express from "express";
