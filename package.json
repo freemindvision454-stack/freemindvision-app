@@ -43,7 +43,7 @@
     "stripe": "^19.2.1",
     "@supabase/supabase-js": "^2.45.0",
 
-    "trtc-js-sdk": "4.17.9",
+    "trtc-js-sdk": "4.17.7",
 
     "@neondatabase/serverless": "^0.10.4"
   },
