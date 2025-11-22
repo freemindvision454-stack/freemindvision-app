@@ -994,14 +994,46 @@ app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
     }
 
     if (sender.credits < totalCost) {
+
+});
+// ------------------------
+// ROUTE: Send a gift
+// ------------------------
+app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
+  try {
+    const senderId = req.user.claims.sub;
+    const { giftTypeId, recipientId, videoId, quantity } = req.body;
+
+    // Validate inputs
+    if (!giftTypeId || !recipientId || !quantity || quantity <= 0) {
+      return res.status(400).json({ message: "Missing or invalid fields" });
+    }
+
+    // Get gift type to calculate cost
+    const giftTypes = await storage.getGiftTypes();
+    const giftType = giftTypes.find((gt) => gt.id === giftTypeId);
+
+    if (!giftType) {
+      return res.status(404).json({ message: "Gift type not found" });
+    }
+
+    const totalCost = giftType.creditCost * quantity;
+
+    // Get sender and check balance
+    const sender = await storage.getUserById(senderId);
+    if (!sender) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
+
+    if ((sender.credits ?? 0) < totalCost) {
       return res.status(400).json({ message: "Insufficient credits" });
     }
 
     // Deduct credits
     await storage.updateUserCredits(senderId, sender.credits - totalCost);
 
-    // Save gift transaction
-    await storage.saveGift({
+    // Save gift transaction (adjust to your storage API)
+    const saved = await storage.saveGift({
       senderId,
       recipientId,
       giftTypeId,
@@ -1011,86 +1043,115 @@ app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
       createdAt: new Date(),
     });
 
-    return res.json({ message: "Gift sent successfully" });
+    // Optionally update recipient earnings / notifications (depends on your app)
+    if (typeof storage.incrementRecipientEarnings === "function") {
+      await storage.incrementRecipientEarnings(recipientId, totalCost);
+    }
 
+    return res.json({ message: "Gift sent successfully", data: saved });
   } catch (err) {
     console.error("❌ Error sending gift:", err);
     return res.status(500).json({ message: "Server error" });
   }
 });
 
-if (checkoutSession.data.length > 0) {
-  const { userId, planId } = checkoutSession.data[0].metadata || {};
-  if (userId && planId) {
-    await storage.createUserSubscription({
-      userId,
-      planId,
-      stripeSubscriptionId: subscription.id,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-    });          
-              console.log(`✅ Subscription created for user ${userId}`);
-        } catch (sessionErr: any) {
-          console.error("Error retrieving checkout session:", sessionErr);
-          // Do not fail webhook: subscription might still be valid
-        }
-      } 
-      else if (event.type === "customer.subscription.updated") {
-        const subscription = event.data.object as any;
 
-        try {
+// ------------------------
+// ROUTE: Stripe webhook
+// ------------------------
+// Note: Make sure your GitHub/EB setup doesn't parse the body into JSON before
+// Stripe signature verification. If you use stripe.webhooks.constructEvent you
+// must use raw body middleware. Here we assume you only need to read event.type
+// from req.body (already parsed).
+app.post("/webhook/stripe", express.json(), async (req: any, res) => {
+  // If you verify signatures with stripe, use express.raw and stripe.constructEvent
+  try {
+    const event = req.body;
+    if (!event || !event.type) {
+      return res.status(400).json({ message: "Invalid webhook payload" });
+    }
+
+    // customer.subscription.created
+    if (event.type === "customer.subscription.created") {
+      const subscription = event.data?.object as any;
+      try {
+        // Try to find related checkout session metadata (if available)
+        if (typeof stripe !== "undefined" && stripe.checkout) {
+          try {
+            const checkoutSession = await stripe.checkout.sessions.list({
+              subscription: subscription.id,
+              limit: 1,
+            });
+
+            if (checkoutSession && checkoutSession.data && checkoutSession.data.length > 0) {
+              const { userId, planId } = checkoutSession.data[0].metadata || {};
+              if (userId && planId) {
+                await storage.createUserSubscription({
+                  userId,
+                  planId,
+                  stripeSubscriptionId: subscription.id,
+                  currentPeriodStart: new Date((subscription.current_period_start ?? 0) * 1000),
+                  currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
+                });
+                console.log(`✅ Subscription created for user ${userId}`);
+              }
+            }
+          } catch (sessionErr: any) {
+            console.error("Error retrieving checkout session:", sessionErr);
+            // Do not fail webhook: subscription might still be valid
+          }
+        } else {
+          // If stripe object isn't available, just try to save subscription by id if metadata present
+          const meta = subscription.metadata || {};
+          if (meta.userId && meta.planId) {
+            await storage.createUserSubscription({
+              userId: meta.userId,
+              planId: meta.planId,
+              stripeSubscriptionId: subscription.id,
+              currentPeriodStart: new Date((subscription.current_period_start ?? 0) * 1000),
+              currentPeriodEnd: new Date((subscription.current_period_end ?? 0) * 1000),
+            });
+          }
+        }
+      } catch (err: any) {
+        console.error("Error handling subscription.created:", err);
+      }
+    }
+
+    // customer.subscription.updated
+    else if (event.type === "customer.subscription.updated") {
+      const subscription = event.data?.object as any;
+      try {
+        if (subscription && subscription.id) {
           await storage.updateSubscriptionStatus(
             subscription.id,
             subscription.status,
-            new Date(subscription.current_period_end * 1000)
+            new Date((subscription.current_period_end ?? 0) * 1000)
           );
-
           console.log(`🔄 Subscription updated: ${subscription.id}`);
-        } catch (err: any}); {
-          console.error("Error updating subscription status:", err});;
-      else {
-        console.log(`⚠️ Unhandled Stripe event type: ${event.type}`);
+        }
+      } catch (err: any) {
+        console.error("Error updating subscription status:", err);
       }
-
-      // Always return 200 so Stripe knows we handled the webhook
-      res.json({ received: true });
-
-    } catch (error: any) {
-      console.error("❌ Stripe webhook error:", error);
-      return res.status(400).send(`Webhook Error: ${error.message}`);
     }
-  });
-} catch (error) {
-  console.error("Error sending gift:", error);
-  res.status(500).json({ message: "Failed to send gift" });
-}
-}); // ← ROUTE SEND-GIFT FERMÉE CORRECTEMENT
-// --- SEND GIFT ROUTE (fin de la route send-gift) ---
-// (Ce bloc assume que la route avait été ouverte plus haut et que nous sommes
-//  dans la partie finale qui déduit le crédit et envoie le cadeau.)
 
-// Deduct credits from sender
-await storage.updateUserCredits(senderId, -totalCost);
+    // handle other event types as needed...
+    else {
+      console.log(`⚠️ Unhandled Stripe event type: ${event.type}`);
+    }
 
-// Send the gift (this also updates recipient earnings)
-const gift = await storage.sendGift({
-  giftTypeId,
-  senderId,
-  recipientId,
-  videoId: videoId || null,
-  quantity,
+    // Always return 200 so Stripe knows we handled the webhook
+    return res.json({ received: true });
+  } catch (error: any) {
+    console.error("❌ Stripe webhook error:", error);
+    return res.status(400).send(`Webhook Error: ${error?.message || "unknown"}`);
+  }
 });
 
-res.json(gift);
 
-} catch (error) {
-  console.error("Error sending gift:", error);
-  res.status(500).json({ message: "Failed to send gift" });
-}
-}); // ← FERME LA ROUTE SEND-GIFT CORRECTEMENT
-
-
-// ===== CREDIT ROUTES =====
+// ------------------------
+// CREDIT ROUTES (reprise)
+// ------------------------
 
 // Get credit packages
 app.get("/api/credit-packages", async (req, res) => {
@@ -1102,7 +1163,6 @@ app.get("/api/credit-packages", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch credit packages" });
   }
 });
-
 
 // ----- BUY PACKAGE ROUTE -----
 // (Je remets ici la logique que tu avais : récupérer package, user, créer customer si besoin,
