@@ -48,8 +48,8 @@
 
     "@supabase/supabase-js": "^2.45.0",
 
-    "trtc-js-sdk": "^5.2.0",
-    "@tencentcloud/chat-uikit-react": "^1.0.12",
+    "trtc-js-sdk": "5.1.0",
+    "@tencentcloud/chat-uikit-react": "1.0.12",
 
     "@neondatabase/serverless": "^0.10.4"
   },
