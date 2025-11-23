@@ -81,7 +81,8 @@ app.use((req, res, next) => {
 
     /* STATIC FILES FOR PRODUCTION */
     if (isProd) {
-      const publicPath = path.join(__dirname, "dist", "public");
+      // 🔥 Correction : ton public est directement dans server/dist/public
+      const publicPath = path.join(__dirname, "public");
 
       console.log(`[SERVER] Serving static files from: ${publicPath}`);
 
