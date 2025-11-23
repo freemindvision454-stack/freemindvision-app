@@ -956,46 +956,19 @@ export async function registerRoutes(app: Express): Promise<Express> {
 
   // ===== GIFT ROUTES =====
 
-  // Get gift types
-  app.get("/api/gift-types", async (req, res) => {
-    try {
-      const giftTypes = await storage.getGiftTypes();
-      res.json(giftTypes);
-    } catch (error) {
-      console.error("Error fetching gift types:", error);
-      res.status(500).json({ message: "Failed to fetch gift types" });
-    }
-  });
-// Send a gift
-app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
+// ------------------------
+// ROUTE: Get gift types
+// ------------------------
+app.get("/api/gift-types", async (req, res) => {
   try {
-    const senderId = req.user.claims.sub;
-    const { giftTypeId, recipientId, videoId, quantity } = req.body;
-
-    // Validate inputs
-    if (!giftTypeId || !recipientId || !quantity) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    // Get gift type to calculate cost
     const giftTypes = await storage.getGiftTypes();
-    const giftType = giftTypes.find((gt) => gt.id === giftTypeId);
-
-    if (!giftType) {
-      return res.status(404).json({ message: "Gift type not found" });
-    }
-
-    const totalCost = giftType.creditCost * quantity;
-
-    // Get sender balance
-    const sender = await storage.getUserById(senderId);
-    if (!sender) {
-      return res.status(404).json({ message: "Sender not found" });
-    }
-
-    if (sender.credits < totalCost) {
-
+    res.json(giftTypes);
+  } catch (error) {
+    console.error("Error fetching gift types:", error);
+    res.status(500).json({ message: "Failed to fetch gift types" });
+  }
 });
+
 // ------------------------
 // ROUTE: Send a gift
 // ------------------------
@@ -1009,7 +982,7 @@ app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
       return res.status(400).json({ message: "Missing or invalid fields" });
     }
 
-    // Get gift type to calculate cost
+    // Get gift type
     const giftTypes = await storage.getGiftTypes();
     const giftType = giftTypes.find((gt) => gt.id === giftTypeId);
 
@@ -1019,8 +992,9 @@ app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
 
     const totalCost = giftType.creditCost * quantity;
 
-    // Get sender and check balance
+    // Get sender
     const sender = await storage.getUserById(senderId);
+
     if (!sender) {
       return res.status(404).json({ message: "Sender not found" });
     }
@@ -1032,7 +1006,7 @@ app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
     // Deduct credits
     await storage.updateUserCredits(senderId, sender.credits - totalCost);
 
-    // Save gift transaction (adjust to your storage API)
+    // Save gift
     const saved = await storage.saveGift({
       senderId,
       recipientId,
@@ -1043,10 +1017,23 @@ app.post("/api/gifts/send", requiresAuth, async (req: any, res) => {
       createdAt: new Date(),
     });
 
-    // Optionally update recipient earnings / notifications (depends on your app)
+    // Update recipient earnings if available
     if (typeof storage.incrementRecipientEarnings === "function") {
       await storage.incrementRecipientEarnings(recipientId, totalCost);
     }
+
+    return res.json({
+      message: "Gift sent successfully",
+      gift: saved,
+    });
+
+  } catch (error) {
+    console.error("Error sending gift:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to send gift", error: String(error) });
+  }
+});
 
     return res.json({ message: "Gift sent successfully", data: saved });
   } catch (err) {
@@ -1175,12 +1162,26 @@ app.post("/api/buy-package", async (req, res) => {
     const packages = await storage.getCreditPackages();
     const pkg = packages.find((p) => p.id === packageId);
 
+    // ================================
+// ===== CREATE PAYMENT INTENT ====
+// ================================
+
+app.post("/api/payment-intent", async (req, res) => {
+  try {
+    const { userId, packageId } = req.body;
+
+    const packages = await storage.getCreditPackages();
+    const pkg = packages.find((p) => p.id === packageId);
+
     if (!pkg) {
       return res.status(404).json({ message: "Package not found" });
-    const user = await storage.getUser(userId});
+    }
+
+    const user = await storage.getUser(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
     // Create or retrieve Stripe customer
     let customerId = user.stripeCustomerId;
     if (!customerId) {
@@ -1189,17 +1190,18 @@ app.post("/api/buy-package", async (req, res) => {
         name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || undefined,
         metadata: { userId },
       });
+
       customerId = customer.id;
       await storage.updateUser(userId, { stripeCustomerId: customerId });
     }
 
-    // Create payment intent
+    // Create PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(parseFloat(pkg.priceUsd) * 100), // cents
       currency: "usd",
       customer: customerId,
       metadata: {
-        userId});
+        userId: userId,
         packageId: pkg.id,
         credits: pkg.credits + (pkg.bonus || 0),
         packageName: pkg.name,
@@ -1214,7 +1216,7 @@ app.post("/api/buy-package", async (req, res) => {
 });
 
 // ===========================
-// ==== STRIPE WEBHOOK =======
+// ===== STRIPE WEBHOOK ======
 // ===========================
 app.post(
   "/api/webhooks/stripe",
@@ -1228,7 +1230,7 @@ app.post(
     let event;
 
     try {
-      // Verify signature if webhook secret set (production)
+      // Verify signature in production
       if (process.env.STRIPE_WEBHOOK_SECRET) {
         event = stripe.webhooks.constructEvent(
           req.body,
@@ -1236,38 +1238,47 @@ app.post(
           process.env.STRIPE_WEBHOOK_SECRET
         );
       } else {
-        // Development: parse without verification (NOT for production)
+        // Development mode (not safe for production)
         const payload = req.body.toString();
         event = JSON.parse(payload);
-        console.warn("⚠️  Webhook signature verification skipped (development mode)");
+        console.warn("⚠️ Webhook signature verification skipped (dev mode)");
       }
 
       // Handle events
       if (event.type === "payment_intent.succeeded") {
         const paymentIntent = event.data.object as any;
-        // Mark transaction completed in your storage
+
         try {
           await storage.updateTransactionStatus(paymentIntent.id, "completed");
+
+          // Add credits to user
+          const { userId, credits } = paymentIntent.metadata;
+          await storage.addUserCredits(userId, Number(credits));
+
           console.log(`✅ Payment succeeded: ${paymentIntent.id}`);
         } catch (err) {
           console.error("Error updating transaction status:", err);
         }
-      } else if (event.type === "payment_intent.payment_failed") {
+      }
+
+      else if (event.type === "payment_intent.payment_failed") {
         const paymentIntent = event.data.object as any;
+
         try {
           await storage.updateTransactionStatus(paymentIntent.id, "failed");
           console.log(`❌ Payment failed: ${paymentIntent.id}`);
         } catch (err) {
           console.error("Error updating transaction status:", err);
         }
-      } else if (event.type === "checkout.session.completed") {
-        const session = event.data.object as any;
-        const { userId, planId } = session.metadata || {};
-
-        }
       }
 
-      // Respond success to Stripe
+      else if (event.type === "checkout.session.completed") {
+        const session = event.data.object as any;
+        const { userId, planId } = session.metadata || {};
+        console.log("Checkout session completed:", session.id);
+      }
+
+      // Send OK to Stripe
       return res.json({ received: true });
     } catch (err: any) {
       console.error("Stripe webhook error:", err.message || err);
@@ -1280,7 +1291,6 @@ app.post(
 // ===== CREDIT ROUTES =====
 // =========================
 
-
 // Get credit packages
 app.get("/api/credit-packages", async (req, res) => {
   try {
@@ -1292,8 +1302,9 @@ app.get("/api/credit-packages", async (req, res) => {
   }
 });
 
-
-// START BUY PACKAGE ROUTE (MISSING IN YOUR CODE)
+// ================================
+// ===== BUY PACKAGE (START) ======
+// ================================
 app.post("/api/buy-package", async (req, res) => {
   try {
     const { userId, packageId } = req.body;
@@ -1309,6 +1320,17 @@ app.post("/api/buy-package", async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    return res.json({
+      message: "Package is valid and user exists",
+      package: pkg,
+      user,
+    });
+  } catch (error) {
+    console.error("Error buying package:", error);
+    return res.status(500).json({ message: "Failed to buy package" });
+  }
+});
 
     // Create or retrieve Stripe customer
     let customerId = user.stripeCustomerId;
