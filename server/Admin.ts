@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
-import { storage } from "./storage";
-import { requiresAuth } from "./auth";
-import { db } from "./db";
-import { users } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import { storage } from "./storage.js"; // Ajout de l'extension
+import { requiresAuth } from "./auth.js"; // Ajout de l'extension
+import { db } from "./db.js"; // Ajout de l'extension
+import { users, videos, follows } from "../shared/schema.js"; // Ajout de l'extension
+import { eq, desc, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -44,35 +44,19 @@ const requireAdmin = async (req: Request, res: Response, next: Function) => {
   }
 };
 
-// Liste des utilisateurs avec pagination et filtres
+// Liste des utilisateurs avec pagination
 router.get("/users", requireAdmin, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
-    const search = req.query.search as string;
     const offset = (page - 1) * limit;
 
-    console.log(`📊 Chargement des utilisateurs - Page: ${page}, Limit: ${limit}, Recherche: ${search}`);
+    console.log(`📊 Chargement des utilisateurs - Page: ${page}, Limit: ${limit}`);
 
-    let usersList;
-    let totalCount;
-
-    if (search) {
-      // Recherche d'utilisateurs
-      const allUsers = await storage.getAllUsers();
-      usersList = allUsers.filter(user => 
-        user.email?.toLowerCase().includes(search.toLowerCase()) ||
-        user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
-        user.lastName?.toLowerCase().includes(search.toLowerCase())
-      ).slice(offset, offset + limit);
-      
-      totalCount = allUsers.length;
-    } else {
-      // Récupération paginée
-      usersList = await storage.getAllUsers();
-      totalCount = usersList.length;
-      usersList = usersList.slice(offset, offset + limit);
-    }
+    // Récupération directe depuis la base de données
+    const usersList = await db.select().from(users).limit(limit).offset(offset);
+    const totalResult = await db.select({ count: sql<number>`count(*)` }).from(users);
+    const totalCount = totalResult[0]?.count || 0;
 
     res.json({
       users: usersList,
@@ -100,17 +84,29 @@ router.get("/users/:id", requireAdmin, async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Récupérer les statistiques de l'utilisateur
-    const userVideos = await storage.getUserVideos(userId);
-    const userFollowers = await storage.getUserFollowers(userId);
-    const userFollowing = await storage.getUserFollowing(userId);
+    // Récupérer les vidéos de l'utilisateur
+    const userVideos = await db.select().from(videos).where(eq(videos.creatorId, userId));
+
+    // Récupérer les followers (personnes qui suivent cet utilisateur)
+    const userFollowers = await db.select()
+      .from(follows)
+      .where(eq(follows.followingId, userId));
+
+    // Récupérer les following (personnes que cet utilisateur suit)
+    const userFollowing = await db.select()
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+
+    // Calculer les statistiques
+    const totalLikes = userVideos.reduce((sum: number, video: any) => sum + (video.likesCount || 0), 0);
+    const totalViews = userVideos.reduce((sum: number, video: any) => sum + (video.viewsCount || 0), 0);
 
     const userStats = {
       videosCount: userVideos.length,
       followersCount: userFollowers.length,
       followingCount: userFollowing.length,
-      totalLikes: userVideos.reduce((sum, video) => sum + (video.likesCount || 0), 0),
-      totalViews: userVideos.reduce((sum, video) => sum + (video.viewsCount || 0), 0),
+      totalLikes,
+      totalViews,
     };
 
     res.json({
@@ -197,26 +193,61 @@ router.patch("/users/:id/status", requireAdmin, async (req: Request, res: Respon
   }
 });
 
+// Recherche d'utilisateurs
+router.get("/users-search", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const search = req.query.search as string;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    console.log(`🔍 Recherche d'utilisateurs: "${search}"`);
+
+    if (!search || search.trim().length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const searchTerm = `%${search.toLowerCase()}%`;
+
+    // Recherche dans la base de données
+    const usersList = await db.select()
+      .from(users)
+      .where(
+        sql`LOWER(${users.email}) LIKE ${searchTerm} OR 
+            LOWER(${users.firstName}) LIKE ${searchTerm} OR 
+            LOWER(${users.lastName}) LIKE ${searchTerm}`
+      )
+      .limit(limit);
+
+    res.json({ users: usersList });
+  } catch (err) {
+    console.error("❌ Erreur recherche utilisateurs:", err);
+    res.status(500).json({ error: "Erreur lors de la recherche d'utilisateurs" });
+  }
+});
+
 // Statistiques de la plateforme
 router.get("/stats", requireAdmin, async (req: Request, res: Response) => {
   try {
     console.log("📈 Chargement des statistiques de la plateforme");
 
-    const allUsers = await storage.getAllUsers();
-    const allVideos = await storage.getVideos(1000); // Augmenter la limite pour les stats
+    // Récupération directe depuis la base
+    const allUsers = await db.select().from(users);
+    const allVideos = await db.select().from(videos);
+
+    const totalViews = allVideos.reduce((sum: number, video: any) => sum + (video.viewsCount || 0), 0);
+    const totalLikes = allVideos.reduce((sum: number, video: any) => sum + (video.likesCount || 0), 0);
 
     const stats = {
       totalUsers: allUsers.length,
-      totalCreators: allUsers.filter(u => u.isCreator).length,
+      totalCreators: allUsers.filter((user: any) => user.isCreator).length,
       totalVideos: allVideos.length,
-      totalViews: allVideos.reduce((sum, video) => sum + (video.viewsCount || 0), 0),
-      totalLikes: allVideos.reduce((sum, video) => sum + (video.likesCount || 0), 0),
-      verifiedUsers: allUsers.filter(u => u.isVerified).length,
-      adminUsers: allUsers.filter(u => u.isAdmin).length,
-      recentSignups: allUsers.filter(u => {
+      totalViews,
+      totalLikes,
+      verifiedUsers: allUsers.filter((user: any) => user.isVerified).length,
+      adminUsers: allUsers.filter((user: any) => user.isAdmin).length,
+      recentSignups: allUsers.filter((user: any) => {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
-        return new Date(u.createdAt) > weekAgo;
+        return new Date(user.createdAt) > weekAgo;
       }).length,
     };
 
