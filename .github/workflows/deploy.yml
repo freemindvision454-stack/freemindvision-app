@@ -1,48 +1,12 @@
-name: Deploy to AWS Elastic Beanstalk
+- name: Login to Amazon ECR
+  run: |
+    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 885706661976.dkr.ecr.us-east-1.amazonaws.com
 
-on:
-  push:
-    branches:
-      - main
+- name: Build Docker image
+  run: docker build -t vision-app .
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+- name: Tag image
+  run: docker tag vision-app:latest 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build project
-        run: |
-          if [ -f package.json ] && grep -q "\"build\":" package.json; then
-            npm run build
-          else
-            echo "No build script found, skipping build"
-          fi
-
-      - name: Create ZIP for Elastic Beanstalk
-        run: |
-          zip -r app.zip . \
-          -x "node_modules/*" \
-          -x ".git/*" \
-          -x ".github/*"
-
-      - name: Deploy to AWS Elastic Beanstalk
-        uses: einaregilsson/beanstalk-deploy@v21
-        with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          region: ${{ secrets.AWS_REGION }}
-          application_name: ${{ secrets.EB_APPLICATION_NAME }}
-          environment_name: ${{ secrets.EB_ENVIRONMENT_NAME }}
-          version_label: "build-${{ github.run_number }}"
-          deployment_package: "app.zip"
+- name: Push to ECR
+  run: docker push 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
