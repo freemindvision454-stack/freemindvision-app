@@ -35,13 +35,16 @@ RUN npm install
 WORKDIR /app/client
 RUN npm install
 
+# Back to /app !
+WORKDIR /app
+
 ############################
 # Build stage
 ############################
 FROM deps AS build
 WORKDIR /app
 
-# Copy full project after install
+# Copy full project
 COPY . .
 
 # Build backend
@@ -60,7 +63,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy dependencies
+# Copy all node_modules correctly
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/server/node_modules ./server/node_modules
 COPY --from=deps /app/client/node_modules ./client/node_modules
@@ -68,15 +71,13 @@ COPY --from=deps /app/client/node_modules ./client/node_modules
 # Copy backend build
 COPY --from=build /app/server/dist ./server/dist
 
-# Copy frontend build into backend public folder
+# Copy frontend build
 COPY --from=build /app/client/dist ./server/dist/public
 
 # Copy root package files
 COPY package*.json ./
 
-# Expose app port
 EXPOSE 3000
 ENV PORT=3000
 
-# Start server
 CMD ["node", "server/dist/index.js"]
