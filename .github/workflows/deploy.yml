@@ -1,12 +1,34 @@
-- name: Login to Amazon ECR
-  run: |
-    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 885706661976.dkr.ecr.us-east-1.amazonaws.com
+name: Deploy to Amazon ECR
 
-- name: Build Docker image
-  run: docker build -t vision-app .
+on:
+  push:
+    branches:
+      - main
 
-- name: Tag image
-  run: docker tag vision-app:latest 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
 
-- name: Push to ECR
-  run: docker push 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 885706661976.dkr.ecr.us-east-1.amazonaws.com
+
+      - name: Build Docker image
+        run: docker build -t vision-app .
+
+      - name: Tag image
+        run: docker tag vision-app:latest 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
+
+      - name: Push to ECR
+        run: docker push 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
