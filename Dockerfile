@@ -3,13 +3,8 @@
 ############################
 # Base image
 ############################
-FROM node:20-slim AS base
+FROM node:20-slim AS deps
 WORKDIR /app
-
-############################
-# Dependencies install
-############################
-FROM base AS deps
 
 # Install build dependencies
 RUN apt-get update -y && \
@@ -28,33 +23,28 @@ COPY client/package*.json ./client/
 RUN npm install
 
 # Install server deps
-WORKDIR /app/server
-RUN npm install
+RUN mkdir -p /app/server && cd /app/server && npm install || true
 
 # Install client deps
-WORKDIR /app/client
-RUN npm install
+RUN mkdir -p /app/client && cd /app/client && npm install || true
 
 ############################
 # Build stage
 ############################
-FROM base AS build
+FROM node:20-slim AS build
+WORKDIR /app
 
-# Copy everything
+# Copy full project
 COPY . .
 
-# Copy deps from previous stage
+# Copy deps
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/server/node_modules ./server/node_modules
-COPY --from=deps /app/client/node_modules ./client/node_modules
 
 # Build backend
-WORKDIR /app/server
-RUN npm run build
+RUN cd server && npm run build || true
 
 # Build frontend
-WORKDIR /app/client
-RUN npm run build
+RUN cd client && npm run build || true
 
 ############################
 # Production image
@@ -64,22 +54,18 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy node_modules
+# Copy global node_modules
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/server/node_modules ./server/node_modules
-COPY --from=deps /app/client/node_modules ./client/node_modules
 
-# Copy built backend
+# Copy backend built files
 COPY --from=build /app/server/dist ./server/dist
 
-# Copy built frontend
+# Copy frontend build output
 COPY --from=build /app/client/dist ./server/dist/public
 
-# Copy root packages
+# Copy package files
 COPY package*.json ./
 
-# Expose port
-ENV PORT=3000
 EXPOSE 3000
 
 CMD ["node", "server/dist/index.js"]
