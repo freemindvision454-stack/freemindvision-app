@@ -21,9 +21,12 @@ RUN apt-get update -y && \
 # Copy root and server dependencies
 COPY package*.json ./
 COPY server/package*.json ./server/
+COPY client/package*.json ./client/
 
+# Install root + server + client dependencies
 RUN npm install
 RUN cd server && npm install
+RUN cd client && npm install
 
 ############################
 # Build stage
@@ -31,10 +34,10 @@ RUN cd server && npm install
 FROM deps AS build
 COPY . .
 
-# Build backend (tsc)
+# Build backend
 RUN cd server && npm run build
 
-# Build frontend (vite)
+# Build frontend
 RUN cd client && npm run build
 
 ############################
@@ -45,14 +48,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy full node_modules
+# Copy node_modules
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/server/node_modules ./server/node_modules
+COPY --from=deps /app/client/node_modules ./client/node_modules
 
-# Copy compiled backend
+# Copy backend built files
 COPY --from=build /app/server/dist ./server/dist
 
-# Copy frontend build output
+# Copy frontend build output → served by backend
 COPY --from=build /app/client/dist ./server/dist/public
 
 # Copy package files
