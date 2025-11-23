@@ -18,17 +18,24 @@ RUN apt-get update -y && \
         pkg-config && \
     rm -rf /var/lib/apt/lists/*
 
+# Copy root and server dependencies
 COPY package*.json ./
 COPY server/package*.json ./server/
 
 RUN npm install
+RUN cd server && npm install
 
 ############################
 # Build stage
 ############################
 FROM deps AS build
 COPY . .
-RUN npm run build
+
+# Build backend (tsc)
+RUN cd server && npm run build
+
+# Build frontend (vite)
+RUN cd client && npm run build
 
 ############################
 # Production image
@@ -38,19 +45,20 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy node_modules
+# Copy full node_modules
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/server/node_modules ./server/node_modules
 
-# Copy backend compiled files
+# Copy compiled backend
 COPY --from=build /app/server/dist ./server/dist
 
-# Copy frontend build (public static files)
-COPY --from=build /app/server/dist/public ./server/dist/public
+# Copy frontend build output
+COPY --from=build /app/client/dist ./server/dist/public
 
 # Copy package files
 COPY package*.json ./
 
-# Expose port for Kubernetes
+# Expose port
 ENV PORT=3000
 EXPOSE 3000
 
