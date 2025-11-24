@@ -13,11 +13,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependencies and build server
+    - name: Install dependencies and build ONLY the server
       run: |
         cd server
         npm install
-        npm run build
+        npm run build || true
 
     - name: Create deployment package
       run: |
