@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
@@ -13,7 +12,6 @@
     "db:push": "drizzle-kit push",
     "postinstall": "npm run build"
   },
-
   "dependencies": {
     "@capacitor/android": "^7.4.4",
     "@capacitor/cli": "^7.4.4",
@@ -96,7 +94,6 @@
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
   },
-
   "devDependencies": {
     "@replit/vite-plugin-cartographer": "^0.4.1",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
@@ -125,7 +122,6 @@
     "typescript": "5.6.3",
     "vite": "^5.4.20"
   },
-
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
   }
