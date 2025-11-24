@@ -1,34 +1,36 @@
-name: Deploy to Amazon ECR
+name: Deploy to Elastic Beanstalk
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  # ou pour déclenchement manuel :
+  workflow_dispatch:
 
 jobs:
-  build-and-push:
+  deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 885706661976.dkr.ecr.us-east-1.amazonaws.com
+    - name: Generate deployment package
+      run: zip -r deploy.zip . -x '*.git*' 'node_modules/*'
 
-      - name: Build Docker image
-        run: docker build -t vision-app .
-
-      - name: Tag image
-        run: docker tag vision-app:latest 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
-
-      - name: Push to ECR
-        run: docker push 885706661976.dkr.ecr.us-east-1.amazonaws.com/cdk-hnb659fds-container-assets-885706661976-us-east-1:latest
+    - name: Deploy to EB
+      uses: einaregilsson/beanstalk-deploy@v21
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: freemindvision
+        environment_name: Freemindvision-env
+        version_label: ${{ github.sha }}
+        region: us-east-1
+        deployment_package: deploy.zip
