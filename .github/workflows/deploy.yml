@@ -1,58 +1,45 @@
-name: Deploy to Elastic Beanstalk
+name: deploy
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
 
-    - name: Clean install and build
-      run: |
-        rm -f package-lock.json
-        npm install
-        npm run build
+      - name: Clean install and build
+        run: |
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
+          npm run build
 
-    - name: Create deployment package
-      run: |
-        mkdir -p eb-package
-        cp -r dist eb-package/
-        cp package.json eb-package/
-        cp package-lock.json eb-package/ 2>/dev/null || true
-        
-        if [ -d "server" ]; then
-          cp -r server eb-package/
-        fi
-        
-        cd eb-package
-        zip -r ../deploy.zip . -x "*.git*" "node_modules/*"
+      - name: Create deployment package
+        run: |
+          zip -r deploy.zip . -x "*.git*" "node_modules/*"
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    - name: Deploy to Elastic Beanstalk
-      uses: einaregilsson/beanstalk-deploy@v21
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        application_name: FreemindVisionApp
-        environment_name: FreemindVisionApp-env   # ✅ CORRIGÉ
-        version_label: ${{ github.sha }}
-        region: us-east-1
-        deployment_package: deploy.zip
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          application_name: FreemindVisionApp
+          environment_name: FreemindVisionApp-env
+          version_label: github-${{ github.run_id }}
+          region: us-east-1
+          deployment_package: deploy.zip
