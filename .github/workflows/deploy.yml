@@ -16,32 +16,27 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'  # Changé de 18 à 20
         cache: 'npm'
 
-    - name: Install and build complete app
+    - name: Clean install and build
       run: |
-        # Installer toutes les dépendances
-        npm ci
-        # Builder l'application
+        # Supprimer le lock file existant et réinstaller proprement
+        rm -f package-lock.json
+        npm install
         npm run build
 
     - name: Create deployment package
       run: |
-        # Créer un package de déploiement pour Elastic Beanstalk
         mkdir -p eb-package
-        
-        # Copier les fichiers nécessaires
         cp -r dist eb-package/
         cp package.json eb-package/
         cp package-lock.json eb-package/ 2>/dev/null || true
         
-        # Si vous avez un dossier server séparé, le copier aussi
         if [ -d "server" ]; then
           cp -r server eb-package/
         fi
         
-        # Créer le fichier zip
         cd eb-package
         zip -r ../deploy.zip . -x "*.git*" "node_modules/*"
 
