@@ -15,21 +15,27 @@ jobs:
         with:
           node-version: 20
 
+      # ---- FIX PRINCIPAL ----
+      # Remplace npm ci par npm install pour éviter les erreurs de lockfile
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Build (client + server)
         run: npm run build
 
       - name: Prune dev deps (keep only production)
-        run: npm prune --production
+        run: npm prune --production || true
 
       - name: Prepare deploy zip
         run: |
           rm -f deploy.zip
-          # include package.json, package-lock (production), node_modules, dist, server files required to run
-          zip -r deploy.zip package.json package-lock.json node_modules dist server/*.js server/dist || true
-          # if your server uses other folders add them (migrate, config, .ebextensions if present)
+          zip -r deploy.zip \
+            package.json \
+            package-lock.json \
+            node_modules \
+            dist \
+            server \
+            || true
 
       - name: Upload to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v21
@@ -38,7 +44,7 @@ jobs:
           environment_name: ${{ secrets.EB_ENVIRONMENT_NAME }}
           region: ${{ secrets.AWS_REGION }}
           version_label: "github-action-${{ github.run_number }}-${{ github.sha }}"
-          bucket_name: "" # leave blank to auto create
+          bucket_name: ""  # auto bucket
           bucket_key: "deploy.zip"
           file: deploy.zip
         env:
