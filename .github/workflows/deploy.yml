@@ -13,26 +13,37 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependencies and build
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install and build complete app
       run: |
-        # Installer toutes les dépendances dans la racine
-        npm install
-        # Builder l'application complète (frontend + backend)
+        # Installer toutes les dépendances
+        npm ci
+        # Builder l'application
         npm run build
 
     - name: Create deployment package
       run: |
-        # Créer un dossier de déploiement propre
-        mkdir -p deploy-package
-        # Copier les fichiers nécessaires
-        cp -r dist deploy-package/
-        cp -r server/package.json deploy-package/
-        cp -r server/package-lock.json deploy-package/ 2>/dev/null || true
-        cp -r server/node_modules deploy-package/ 2>/dev/null || true
+        # Créer un package de déploiement pour Elastic Beanstalk
+        mkdir -p eb-package
         
-        # Créer le fichier de déploiement
-        cd deploy-package
-        zip -r ../deploy.zip . -x "*.git*"
+        # Copier les fichiers nécessaires
+        cp -r dist eb-package/
+        cp package.json eb-package/
+        cp package-lock.json eb-package/ 2>/dev/null || true
+        
+        # Si vous avez un dossier server séparé, le copier aussi
+        if [ -d "server" ]; then
+          cp -r server eb-package/
+        fi
+        
+        # Créer le fichier zip
+        cd eb-package
+        zip -r ../deploy.zip . -x "*.git*" "node_modules/*"
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
