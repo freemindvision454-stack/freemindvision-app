@@ -1,70 +1,112 @@
-name: Deploy to Elastic Beanstalk
+import express, { Request, Response, NextFunction } from "express";
+import { createServer } from "http";
+import { registerRoutes } from "./routes";
+import { setupWebSocket } from "./websocket";
+import { runMigrations } from "./migrate";
+import path from "path";
+import { fileURLToPath } from "url";
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+// Fix ES Modules (__dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+const app = express();
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+/* RAW BODY (Stripe / Webhooks) */
+declare module "http" {
+  interface IncomingMessage {
+    rawBody?: Buffer;
+  }
+}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as any).rawBody = buf;
+    },
+  })
+);
 
-    - name: Install dependencies
-      run: |
-        npm install
+app.use(express.urlencoded({ extended: false }));
 
-    - name: Build server
-      run: |
-        # compile TypeScript from server/
-        npm run build:server
+/* LOGGER */
+app.use((req, res, next) => {
+  const start = Date.now();
+  const originalJson = res.json;
 
-    - name: Build client
-      run: |
-        # compile vite client build in dist/
-        npm run build:client
+  let captured: any = undefined;
 
-    - name: Create deployment package
-      run: |
-        mkdir -p eb-package
+  res.json = function (body: any) {
+    captured = body;
+    return originalJson.apply(this, [body]);
+  };
 
-        # Copy server build
-        cp -r server/dist eb-package/server/dist
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (req.path.startsWith("/api")) {
+      console.log(
+        `${req.method} ${req.path} ${res.statusCode} in ${duration}ms :: ${JSON.stringify(
+          captured
+        ).slice(0, 200)}`
+      );
+    }
+  });
 
-        # Copy client build
-        cp -r dist eb-package/dist
+  next();
+});
 
-        # Copy main files
-        cp package.json eb-package/
-        cp package-lock.json eb-package/ || true
-        cp Procfile eb-package/
+/* STARTUP */
+(async () => {
+  try {
+    const isProd = process.env.NODE_ENV === "production";
+    const PORT = parseInt(process.env.PORT || "8080", 10);
 
-        cd eb-package
-        zip -r ../deploy.zip . -x "*.git*" "node_modules/*"
+    console.log(`\n[SERVER] Starting...`);
+    console.log(`[SERVER] Mode: ${isProd ? "PRODUCTION" : "DEV"}`);
+    console.log(`[SERVER] Port: ${PORT}`);
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+    /* DB MIGRATIONS */
+    await runMigrations();
 
-    - name: Deploy to Elastic Beanstalk
-      uses: einaregilsson/beanstalk-deploy@v21
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        application_name: FreemindVisionApp
-        environment_name: FreemindVisionApp-env
-        version_label: ${{ github.sha }}
-        region: us-east-1
-        deployment_package: deploy.zip
+    /* API ROUTES (AUTH, ADMIN, LIVE, TRTC, etc.) */
+    await registerRoutes(app);
+
+    /* GLOBAL ERROR HANDLER */
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error("API Error:", err);
+      res.status(err.status || 500).json({
+        error: err.message || "Internal server error",
+      });
+    });
+
+    /* STATIC FILES FOR PRODUCTION */
+    if (isProd) {
+      // the client build will be output to server/dist/public if you prefer,
+      // but here we assume vite build writes client -> dist (root/dist)
+      const publicPath = path.join(__dirname, "..", "dist"); // adjust if needed
+
+      console.log(`[SERVER] Serving static files from: ${publicPath}`);
+
+      app.use(express.static(publicPath));
+
+      // SPA fallback
+      app.get("*", (_req, res) => {
+        res.sendFile(path.join(publicPath, "index.html"));
+      });
+    }
+
+    /* CREATE SERVER + WEBSOCKET */
+    const server = createServer(app);
+
+    setupWebSocket(server);
+
+    /* START */
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`[SERVER] Running on http://0.0.0.0:${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("\n[FATAL] Server failed to start:", error);
+    process.exit(1);
+  }
+})();
