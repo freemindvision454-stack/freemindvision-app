@@ -1,45 +1,46 @@
-name: deploy
-
+name: Build and Deploy to Elastic Beanstalk
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Clean install and build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (client + server)
+        run: npm run build
+
+      - name: Prune dev deps (keep only production)
+        run: npm prune --production
+
+      - name: Prepare deploy zip
         run: |
-          rm -f package-lock.json
-          npm install --legacy-peer-deps
-          npm run build
+          rm -f deploy.zip
+          # include package.json, package-lock (production), node_modules, dist, server files required to run
+          zip -r deploy.zip package.json package-lock.json node_modules dist server/*.js server/dist || true
+          # if your server uses other folders add them (migrate, config, .ebextensions if present)
 
-      - name: Create deployment package
-        run: |
-          zip -r deploy.zip . -x "*.git*" "node_modules/*"
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Deploy to Elastic Beanstalk
+      - name: Upload to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v21
         with:
-          application_name: FreemindVisionApp
-          environment_name: FreemindVisionApp-env
-          version_label: github-${{ github.run_id }}
-          region: us-east-1
-          deployment_package: deploy.zip
+          application_name: ${{ secrets.EB_APPLICATION_NAME }}
+          environment_name: ${{ secrets.EB_ENVIRONMENT_NAME }}
+          region: ${{ secrets.AWS_REGION }}
+          version_label: "github-action-${{ github.run_number }}-${{ github.sha }}"
+          bucket_name: "" # leave blank to auto create
+          bucket_key: "deploy.zip"
+          file: deploy.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
