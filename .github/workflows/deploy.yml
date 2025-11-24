@@ -16,12 +16,11 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'  # Changé de 18 à 20
+        node-version: '20'
         cache: 'npm'
 
     - name: Clean install and build
       run: |
-        # Supprimer le lock file existant et réinstaller proprement
         rm -f package-lock.json
         npm install
         npm run build
@@ -53,7 +52,7 @@ jobs:
         aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         application_name: FreemindVisionApp
-        environment_name: freemindvision-prod
+        environment_name: FreemindVisionApp-env   # ✅ CORRIGÉ
         version_label: ${{ github.sha }}
         region: us-east-1
         deployment_package: deploy.zip
