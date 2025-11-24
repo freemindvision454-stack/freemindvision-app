@@ -13,6 +13,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install dependencies and build server
+      run: |
+        cd server
+        npm install
+        npm run build
+
+    - name: Create deployment package
+      run: |
+        cd server
+        zip -r ../deploy.zip . -x "*.git*" "src/*"
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -20,10 +31,7 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    - name: Generate deployment package
-      run: zip -r deploy.zip . -x '*.git*' 'node_modules/*'
-
-    - name: Deploy to EB
+    - name: Deploy to Elastic Beanstalk
       uses: einaregilsson/beanstalk-deploy@v21
       with:
         aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -33,4 +41,3 @@ jobs:
         version_label: ${{ github.sha }}
         region: us-east-1
         deployment_package: deploy.zip
-        create_environment: true
