@@ -21,8 +21,6 @@ jobs:
 
     - name: Install and build
       run: |
-        rm -rf node_modules
-        rm -f package-lock.json
         npm install --legacy-peer-deps
         npm run build
 
@@ -48,8 +46,7 @@ jobs:
         aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         application_name: FreemindVisionApp
-        environment_name: FreemindVisionApp-prod  # ← CORRIGEZ CE NOM
+        environment_name: FreemindVisionApp-env
         version_label: ${{ github.sha }}
         region: us-east-1
         deployment_package: deploy.zip
-        wait_for_environment_recovery: 300
