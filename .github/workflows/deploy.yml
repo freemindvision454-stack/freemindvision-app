@@ -1,52 +1,55 @@
-name: Build and Deploy to Elastic Beanstalk
+name: Deploy to Elastic Beanstalk
+
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+    - name: Setup Node.js 20
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
 
-      # ---- FIX PRINCIPAL ----
-      # Remplace npm ci par npm install pour éviter les erreurs de lockfile
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+    - name: Install and build
+      run: |
+        rm -rf node_modules
+        rm -f package-lock.json
+        npm install --legacy-peer-deps
+        npm run build
 
-      - name: Build (client + server)
-        run: npm run build
+    - name: Create deployment package
+      run: |
+        mkdir -p deploy-pkg
+        cp -r dist deploy-pkg/
+        cp package.json deploy-pkg/
+        cp -r server deploy-pkg/ 2>/dev/null || true
+        cd deploy-pkg
+        zip -r ../deploy.zip .
 
-      - name: Prune dev deps (keep only production)
-        run: npm prune --production || true
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Prepare deploy zip
-        run: |
-          rm -f deploy.zip
-          zip -r deploy.zip \
-            package.json \
-            package-lock.json \
-            node_modules \
-            dist \
-            server \
-            || true
-
-      - name: Upload to Elastic Beanstalk
-        uses: einaregilsson/beanstalk-deploy@v21
-        with:
-          application_name: ${{ secrets.EB_APPLICATION_NAME }}
-          environment_name: ${{ secrets.EB_ENVIRONMENT_NAME }}
-          region: ${{ secrets.AWS_REGION }}
-          version_label: "github-action-${{ github.run_number }}-${{ github.sha }}"
-          bucket_name: ""  # auto bucket
-          bucket_key: "deploy.zip"
-          file: deploy.zip
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v21
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: FreemindVisionApp
+        environment_name: FreemindVisionApp-prod  # ← CORRIGEZ CE NOM
+        version_label: ${{ github.sha }}
+        region: us-east-1
+        deployment_package: deploy.zip
+        wait_for_environment_recovery: 300
