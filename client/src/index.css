@@ -15,7 +15,13 @@
   --elevate-2: rgba(0,0,0, .08);
 
   --background: 240 5% 96%;
-
+@layer base {
+  :root {
+    --background: 240 6% 96%;
+    --foreground: 240 6% 10%;
+    /* etc… pour toutes les variables */
+  }
+}
   --foreground: 240 6% 10%;
 
   --border: 240 6% 88%;
