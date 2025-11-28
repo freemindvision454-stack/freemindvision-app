@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ############################
-# Base image
+# 1 — Base deps
 ############################
 FROM node:20-slim AS deps
 WORKDIR /app
@@ -9,61 +9,54 @@ WORKDIR /app
 # Install build dependencies
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
-        build-essential \
         python3 \
-        pkg-config && \
+        build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy package manifests
+# Copy only package files
 COPY package*.json ./
 COPY server/package*.json ./server/
 COPY client/package*.json ./client/
 
-# Install root deps
-RUN npm install
-
-# Install server deps
-RUN mkdir -p /app/server && cd /app/server && npm install || true
-
-# Install client deps
-RUN mkdir -p /app/client && cd /app/client && npm install || true
+# Install dependencies
+RUN npm install --workspaces --include-workspace-root
 
 ############################
-# Build stage
+# 2 — Build stage
 ############################
 FROM node:20-slim AS build
 WORKDIR /app
 
-# Copy full project
+# Copy everything
 COPY . .
 
-# Copy deps
+# Copy installed deps
 COPY --from=deps /app/node_modules ./node_modules
 
 # Build backend
-RUN cd server && npm run build || true
+RUN npm --workspace server run build
 
 # Build frontend
-RUN cd client && npm run build || true
+RUN npm --workspace client run build
 
 ############################
-# Production image
+# 3 — Production image
 ############################
 FROM node:20-slim AS prod
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy global node_modules
+# Copy node_modules
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy backend built files
+# Copy backend build
 COPY --from=build /app/server/dist ./server/dist
 
-# Copy frontend build output
+# Copy frontend build to backend public folder
 COPY --from=build /app/client/dist ./server/dist/public
 
-# Copy package files
+# Copy root package files
 COPY package*.json ./
 
 EXPOSE 3000
