@@ -1,4 +1,4 @@
-niimport adminRoutes from "./admin.js";
+import adminRoutes from "./admin.js";
 import type { Express, Request, Response } from "express";
 import express from "express";
 import { storage } from "./storage";
