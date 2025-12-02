@@ -1292,5 +1292,9 @@ app.delete("/api/admin/delete-user", requiresAdmin, async (req: Request, res: Re
   app.use("/admin", adminRoutes);
 
   return app;
-}return app;
-});
+}
+
+export async function registerRoutes(app: any) {
+  // Register global routes here if needed
+  return app;
+}
