@@ -1,8 +1,7 @@
-import adminRoutes from "./admin.js";
+
 import type { Express, Request, Response } from "express";
 import express from "express";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, requiresAuth, isReplitAuthEnabled } from "./auth";
 import { setupLocalStrategy } from "./auth/localStrategy";
 import multer from "multer";
 import path from "path";
@@ -10,12 +9,10 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import Stripe from "stripe";
 import { db } from "./db";
-import { users, referrals, userSubscriptions } from "./shared/schema";
 import { eq } from "drizzle-orm";
 import { getOnlineUsers, isUserOnline } from "./websocket";
 import passport from "passport";
 import rateLimit from "express-rate-limit";
-import { registerSchema, loginSchema, type SessionUser } from "./shared/authSchema";
 import { initializeCloudinary, cloudinaryUploadStream } from "./cloudinary";
 import { sendSupportEmail } from "./lib/email";
 // Configure multer pour les uploads de vidéos
