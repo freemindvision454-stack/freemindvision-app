@@ -1293,8 +1293,3 @@ app.use("/admin", adminRoutes);
 // Fin de la fonction principale qui inclut toutes les routes
 return app;
 }
-
-// Fonction d’enregistrement des routes globales
-export async function registerRoutes(app: any) {
-  // Ajoute ici des routes globales si nécessaire
-  return app}
