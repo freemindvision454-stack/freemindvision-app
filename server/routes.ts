@@ -1297,5 +1297,4 @@ return app;
 // Fonction d’enregistrement des routes globales
 export async function registerRoutes(app: any) {
   // Ajoute ici des routes globales si nécessaire
-  return app;
-}
+  return app});
