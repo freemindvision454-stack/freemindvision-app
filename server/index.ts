@@ -1,18 +1,18 @@
 import express, { Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes";
-import { setupWebSocket } from "./websocket";
-import { runMigrations } from "./migrate";
+import { registerRoutes } from "./routes.js";
+import { setupWebSocket } from "./websocket.js";
+import { runMigrations } from "./migrate.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Fix ES Modules (__dirname)
+/* ES MODULE FIX */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-/* RAW BODY (Stripe / Webhooks) */
+/* RAW BODY FOR STRIPE / WEBHOOKS */
 declare module "http" {
   interface IncomingMessage {
     rawBody?: Buffer;
@@ -34,18 +34,18 @@ app.use((req, res, next) => {
   const start = Date.now();
   const originalJson = res.json;
 
-  let captured: any = undefined;
+  let captured: any;
 
   res.json = function (body: any) {
     captured = body;
-    return originalJson.apply(this, [body]);
+    return originalJson.call(this, body);
   };
 
   res.on("finish", () => {
-    const duration = Date.now() - start;
     if (req.path.startsWith("/api")) {
+      const duration = Date.now() - start;
       console.log(
-        `${req.method} ${req.path} ${res.statusCode} in ${duration}ms :: ${JSON.stringify(
+        `${req.method} ${req.path} ${res.statusCode} - ${duration}ms :: ${JSON.stringify(
           captured
         ).slice(0, 200)}`
       );
@@ -55,54 +55,63 @@ app.use((req, res, next) => {
   next();
 });
 
-/* STARTUP */
+/* BOOTSTRAP */
 (async () => {
   try {
     const isProd = process.env.NODE_ENV === "production";
-    const PORT = parseInt(process.env.PORT || "8080", 10);
+    const PORT = Number(process.env.PORT || 8080);
 
-    console.log(`\n[SERVER] Starting...`);
-    console.log(`[SERVER] Mode: ${isProd ? "PRODUCTION" : "DEV"}`);
-    console.log(`[SERVER] Port: ${PORT}`);
+    console.log("==========================================");
+    console.log("== FreeMind Vision Server Starting...    ==");
+    console.log(`== MODE: ${isProd ? "PRODUCTION" : "DEVELOPMENT"}         ==`);
+    console.log(`== PORT: ${PORT}                             ==`);
+    console.log("==========================================\n");
 
-    /* DB MIGRATIONS */
+    /* RUN MIGRATIONS */
     await runMigrations();
 
-    /* API ROUTES */
+    /* REGISTER API ROUTES */
     await registerRoutes(app);
 
     /* GLOBAL ERROR HANDLER */
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error("API Error:", err);
-      res.status(err.status || 500).json({
-        error: err.message || "Internal server error",
-      });
-    });
+    app.use(
+      (
+        err: any,
+        _req: Request,
+        res: Response,
+        _next: NextFunction
+      ) => {
+        console.error("🔥 API ERROR:", err);
+        res.status(err.status || 500).json({
+          error: err.message || "Internal server error",
+        });
+      }
+    );
 
-    /* STATIC FILES (PRODUCTION ONLY) */
+    /* STATIC FILES PRODUCTION */
     if (isProd) {
       const publicPath = path.join(__dirname, "..", "dist");
-      console.log(`[SERVER] Serving static files from: ${publicPath}`);
+
+      console.log(`[SERVER] Static assets: ${publicPath}`);
 
       app.use(express.static(publicPath));
 
-      // SPA fallback
       app.get("*", (_req, res) => {
         res.sendFile(path.join(publicPath, "index.html"));
       });
     }
 
-    /* SERVER + WEBSOCKET */
+    /* CREATE SERVER + WEBSOCKET */
     const server = createServer(app);
     setupWebSocket(server);
 
-    /* START */
+    /* START SERVER */
     server.listen(PORT, "0.0.0.0", () => {
-      console.log(`[SERVER] Running on http://0.0.0.0:${PORT}`);
+      console.log(`[SERVER] Running at http://0.0.0.0:${PORT}`);
     });
 
   } catch (error) {
-    console.error("\n[FATAL] Server failed to start:", error);
+    console.error("❌ FATAL SERVER ERROR:", error);
     process.exit(1);
   }
 })();
