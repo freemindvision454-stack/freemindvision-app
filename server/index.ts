@@ -22,7 +22,7 @@ declare module "http" {
 app.use(
   express.json({
     verify: (req, _res, buf) => {
-      (req as any).rawBody = buf;
+      req.rawBody = buf;
     },
   })
 );
@@ -68,7 +68,7 @@ app.use((req, res, next) => {
     /* DB MIGRATIONS */
     await runMigrations();
 
-    /* API ROUTES (AUTH, ADMIN, LIVE, TRTC, etc.) */
+    /* API ROUTES */
     await registerRoutes(app);
 
     /* GLOBAL ERROR HANDLER */
@@ -79,12 +79,9 @@ app.use((req, res, next) => {
       });
     });
 
-    /* STATIC FILES FOR PRODUCTION */
+    /* STATIC FILES (PRODUCTION ONLY) */
     if (isProd) {
-      // the client build will be output to server/dist/public if you prefer,
-      // but here we assume vite build writes client -> dist (root/dist)
-      const publicPath = path.join(__dirname, "..", "dist"); // adjust if needed
-
+      const publicPath = path.join(__dirname, "..", "dist");
       console.log(`[SERVER] Serving static files from: ${publicPath}`);
 
       app.use(express.static(publicPath));
@@ -95,9 +92,8 @@ app.use((req, res, next) => {
       });
     }
 
-    /* CREATE SERVER + WEBSOCKET */
+    /* SERVER + WEBSOCKET */
     const server = createServer(app);
-
     setupWebSocket(server);
 
     /* START */
