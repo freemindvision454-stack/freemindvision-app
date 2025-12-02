@@ -1287,14 +1287,15 @@ app.delete("/api/admin/delete-user", requiresAdmin, async (req: Request, res: Re
       res.status(500).json({ message: "Failed to fetch online users" });
     }
   });
-
-// ===== ROUTES PANEL ADMIN =====
+  // ===== ROUTES PANEL ADMIN =====
 app.use("/admin", adminRoutes);
 
+// Fin de la fonction principale qui inclut toutes les routes
 return app;
 }
 
+// Fonction d’enregistrement des routes globales
 export async function registerRoutes(app: any) {
-  // Register global routes here if needed
+  // Ajoute ici des routes globales si nécessaire
   return app;
-  }
+}
