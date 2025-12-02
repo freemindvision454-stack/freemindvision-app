@@ -1288,13 +1288,13 @@ app.delete("/api/admin/delete-user", requiresAdmin, async (req: Request, res: Re
     }
   });
 
-  // ===== ROUTES PANEL ADMIN =====
-  app.use("/admin", adminRoutes);
+// ===== ROUTES PANEL ADMIN =====
+app.use("/admin", adminRoutes);
 
-  return app;
+return app;
 }
 
 export async function registerRoutes(app: any) {
   // Register global routes here if needed
   return app;
-}
+  }
