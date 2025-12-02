@@ -1292,5 +1292,5 @@ app.delete("/api/admin/delete-user", requiresAdmin, async (req: Request, res: Re
   app.use("/admin", adminRoutes);
 
   return app;
-}
-export { registerRoutes };
+}return app;
+});
