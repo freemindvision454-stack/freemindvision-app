@@ -499,7 +499,7 @@ app.get("/api/videos/search", async (req, res) => {
 
     // Recherche dans titre, description et nom créateur
     const matchingVideos = await Promise.all(
-      allVideos.map(async (video) => {
+    allVideos.map(async (video) => {
         const creator = await storage.getUser(video.creatorId);
         const creatorName = creator?.firstName && creator?.lastName
           ? `${creator.firstName} ${creator.lastName}`.toLowerCase()
