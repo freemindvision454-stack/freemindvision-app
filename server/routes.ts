@@ -496,7 +496,6 @@ app.get("/api/videos/search", async (req, res) => {
 
     const searchTerm = query.trim().toLowerCase();
     const allVideos = await storage.getVideos(500);
-
     // Recherche dans titre, description et nom créateur
     const matchingVideos = await Promise.all(
     allVideos.map(async (video) => {
