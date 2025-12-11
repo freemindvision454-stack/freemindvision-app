@@ -1,9 +1,7 @@
 {
-  "expo": {
-    "name": "Freemind Vision",
-    "slug": "freemindvision",
-    "android": {
-      "package": "com.freemindvision.app"
-    }
+  "supportsTablet": true,
+  "icon": "./assets/icon.png",
+  "infoPlist": {
+    "CFBundleDisplayName": "Freemind Vision"
   }
 }

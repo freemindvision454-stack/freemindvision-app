@@ -19,6 +19,11 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#000000"
       }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c906969f-209e-4960-bf75-815d2a436672"
+      }
     }
   }
 }
