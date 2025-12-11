@@ -5,28 +5,20 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "android": {
       "package": "com.freemindvision.app",
-      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#000000"
       }
-    },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.freemindvision.app"
-    },
-    "plugins": [
-      "expo-file-system",
-      "expo-image-picker",
-      "expo-camera"
-    ]
+    }
   }
 }
