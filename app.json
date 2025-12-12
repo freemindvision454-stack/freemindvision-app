@@ -30,5 +30,7 @@
       }
     },
     "owner": "freemindvision_app"
-  }
+  },
+  "name": "Freemind Vision",
+  "slug": "freemindvision-app"
 }
