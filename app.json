@@ -3,5 +3,25 @@
   "icon": "./assets/icon.png",
   "infoPlist": {
     "CFBundleDisplayName": "Freemind Vision"
+  },
+  "expo": {
+    "icon": "./assets/icon.png",
+    "favicon": "./assets/favicon.png",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png"
+      },
+      "package": "com.freemindvision.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.freemindvision.app"
+    },
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "name": "Freemind Vision",
+    "slug": "freemind-vision"
   }
 }

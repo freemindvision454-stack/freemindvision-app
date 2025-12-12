@@ -22,6 +22,9 @@
       "eas": {
         "projectId": "7cfbb8fa-7653-4103-9e49-cb56782d4bda"
       }
+    },
+    "ios": {
+      "bundleIdentifier": "com.freemindvision.app"
     }
   }
 }
