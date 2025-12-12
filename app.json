@@ -9,7 +9,8 @@
     "favicon": "./assets/favicon.png",
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
       },
       "package": "com.freemindvision.app"
     },
@@ -22,6 +23,12 @@
       "backgroundColor": "#000000"
     },
     "name": "Freemind Vision",
-    "slug": "freemind-vision"
+    "slug": "freemindvision-app",
+    "extra": {
+      "eas": {
+        "projectId": "c906969f-209e-4960-bf75-815d2a436672"
+      }
+    },
+    "owner": "freemindvision_app"
   }
 }
